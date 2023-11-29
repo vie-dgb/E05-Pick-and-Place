@@ -164,8 +164,22 @@ CmdContain HansCommand::ReadCurFSM(int robotId) {
     return CmdContain(cmd);
 }
 
-//HansCommand::CmdContain HansCommand::PCS2ACS(int robotId) {}
-//HansCommand::CmdContain HansCommand::WayPoint(int robotId) {}
+//CmdContain HansCommand::PCS2ACS(int robotId) {}
+
+CmdContain HansCommand::WayPoint(int robotId, DescartesPoint PCS, JointPoint ACS,
+                    QString TCPName, QString UCSName,
+                    double velo, double Accel, double Radius, MoveType type, bool isUseJoint,
+                    bool isSeek, int bit, bool state, QString PointGuid) {
+    QString cmd = QString::asprintf("WayPoint,%d,", robotId);
+    cmd += QString::asprintf("%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,", PCS.X, PCS.Y, PCS.Z, PCS.rX, PCS.rY, PCS.rZ);
+    cmd += QString::asprintf("%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,", ACS.J1, ACS.J2, ACS.J3, ACS.J4, ACS.J5, ACS.J6);
+    cmd += TCPName + "," + UCSName + ",";
+    cmd += QString::asprintf("%.3f,%.3f,%.3f,%d,", velo, Accel, Radius, type);
+    cmd += QString::asprintf("%d,%d,%d,%d,", ((isUseJoint) ? 1 : 0), ((isSeek) ? 1 : 0), bit, ((state) ? 1 : 0));
+    cmd += PointGuid + ",;";
+
+    return CmdContain(cmd);
+}
 
 CmdContain HansCommand::MoveJ(int robotId, JointPoint point) {
     QString cmd = QString::asprintf("MoveJ,%d,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,;",
@@ -178,5 +192,35 @@ CmdContain HansCommand::MoveL(int robotId, DescartesPoint point) {
                                     robotId, point.X, point.Y, point.Z, point.rX, point.rY, point.rZ);
     return  CmdContain(cmd);
 }
+
+CmdContain HansCommand::ShortJogJ(int robotId, JointID joint, MoveDirection direction) {
+    QString cmd = QString::asprintf("ShortJogJ,%d,%d,%d,;", robotId, joint, direction);
+    return CmdContain(cmd);
+}
+
+CmdContain HansCommand::ShortJogL(int robotId, AxisID axis, MoveDirection direction) {
+    QString cmd = QString::asprintf("ShortJogL,%d,%d,%d,;", robotId, axis, direction);
+    return CmdContain(cmd);
+}
+
+CmdContain HansCommand::PauseScript() {
+    return CmdContain("PauseScript,;");
+}
+
+CmdContain HansCommand::ContinueScript() {
+    return CmdContain("ContinueScript,;");
+}
+
+CmdContain HansCommand::StartScript() {
+    return CmdContain("StartScript,;");
+}
+
+CmdContain HansCommand::StopScript() {
+    return CmdContain("StopScript,;");
+}
+
+//CmdContain HansCommand::RunFunc() {}
+
+
 
 }

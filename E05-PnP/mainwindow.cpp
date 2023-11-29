@@ -144,12 +144,60 @@ void MainWindow::on_click_robot_connect() {
 }
 
 void MainWindow::on_click_robot_control() {
-    hansRobot->pushCommand(rb::HansCommand::SetOverride(0, 2));
-    hansRobot->pushCommand(rb::HansCommand::SetUCSByName(0, "Plane_1"));
-    hansRobot->pushCommand(rb::HansCommand::MoveL(0,
-                rb::DescartesPoint(0,0,100,180,0,0)));
-    hansRobot->pushCommand(rb::HansCommand::MoveL(0,
-                rb::DescartesPoint(100,100,50,180,0,0)));
+    hansRobot->pushCommand(rb::HansCommand::SetOverride(0, 100));
+//    hansRobot->pushCommand(rb::HansCommand::SetUCSByName(0, "Plane_1"));
+//    hansRobot->pushCommand(rb::HansCommand::MoveL(0,
+//                rb::DescartesPoint(0,0,100,180,0,0)));
+//    hansRobot->pushCommand(rb::HansCommand::MoveL(0,
+//                rb::DescartesPoint(100,100,50,180,0,0)));
 //    hansRobot->pushCommand(rb::HansCommand::MoveL(0,
 //                rb::DescartesPoint(-396.255,34,200,180,0,0)));
+
+    for(int i=0;i<100;i++) {
+
+    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+                                rb::DescartesPoint(0,0,100,180,0,0),
+                                rb::JointPoint(0,0,0,0,0,0),
+                                "TCP_dh_gripper",
+                                "Plane_1",
+                                500,
+                                2500,
+                                100,
+                                rb::MoveL,
+                                false, false, 0, true));
+
+    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+                                 rb::DescartesPoint(0,200,100,180,0,0),
+                                 rb::JointPoint(0,0,0,0,0,0),
+                                 "TCP_dh_gripper",
+                                 "Plane_1",
+                                 500,
+                                 2500,
+                                 100,
+                                 rb::MoveL,
+                                 false, false, 0, true));
+
+    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+                                 rb::DescartesPoint(200,200,100,180,0,0),
+                                 rb::JointPoint(0,0,0,0,0,0),
+                                 "TCP_dh_gripper",
+                                 "Plane_1",
+                                 500,
+                                 2500,
+                                 100,
+                                 rb::MoveL,
+                                 false, false, 0, true));
+
+    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+                                 rb::DescartesPoint(200,0,100,180,0,0),
+                                 rb::JointPoint(0,0,0,0,0,0),
+                                 "TCP_dh_gripper",
+                                 "Plane_1",
+                                 500,
+                                 2500,
+                                 100,
+                                 rb::MoveL,
+                                 false, false, 0, true));
+
+    }
 }

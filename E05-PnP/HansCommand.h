@@ -5,6 +5,39 @@
 
 namespace rb {
 
+enum AnalogPattern : int {
+    Voltage = 0,
+    Current = 1
+};
+
+enum MoveType : int {
+    MoveJ = 0,
+    MoveL = 1
+};
+
+enum MoveDirection : int {
+    Negative = 0,
+    Positive = 1
+};
+
+enum JointID : int {
+    J1 = 0,
+    J2 = 1,
+    J3 = 2,
+    J4 = 3,
+    J5 = 4,
+    J6 = 5
+};
+
+enum AxisID : int {
+    X = 0,
+    Y = 1,
+    Z = 2,
+    RX = 3,
+    RY = 4,
+    RZ = 5
+};
+
 struct CmdContain
 {
     QString command;
@@ -16,11 +49,6 @@ struct CmdContain
     CmdContain(QString cmd) {
         command = cmd;
     }
-};
-
-enum AnalogPattern : int {
-    Voltage = 0,
-    Current = 1
 };
 
 struct DescartesPoint
@@ -115,9 +143,18 @@ public:
     static CmdContain ReadRobotState(int robotId);
     static CmdContain ReadCurFSM(int robotId);
 //    static CmdContain PCS2ACS(int robotId);
-//    static CmdContain WayPoint(int robotId);
+    static CmdContain WayPoint(int robotId, DescartesPoint PCS, JointPoint ACS, QString TCPName,
+        QString UCSName, double velo, double Accel, double Radius, MoveType type, bool isUseJoint,
+        bool isSeek, int bit, bool state, QString PointGuid = " ");
     static CmdContain MoveJ(int robotId, JointPoint point);
     static CmdContain MoveL(int robotId, DescartesPoint point);
+    static CmdContain ShortJogJ(int robotId, JointID joint, MoveDirection direction);
+    static CmdContain ShortJogL(int robotId, AxisID axis, MoveDirection direction);
+    static CmdContain PauseScript();
+    static CmdContain ContinueScript();
+    static CmdContain StartScript();
+    static CmdContain StopScript();
+//    static CmdContain RunFunc();
 };
 
 }
