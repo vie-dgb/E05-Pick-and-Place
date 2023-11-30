@@ -8,6 +8,7 @@
 #include <QMutex>
 
 #include "HansCommand.h"
+#include "TimeCounter.h"
 
 using namespace std::chrono;
 
@@ -29,6 +30,7 @@ public:
     void robotConnect(QString address);
     void robotDisconnect();
     bool robotIsConnected();
+    HansRobotState GetRobotState();
     void pushCommand(CmdContain cmd);
 
 private:
@@ -40,7 +42,16 @@ private:
     void queueCommandPopFront();
     void commandHandle();
 
+    void responseHandle(QString raw);
+    bool responseCommandCheck(QStringList &param);
+    void response_ReadRobotState(QStringList &param);
+    void response_ReadCurFSM(QStringList &param);
+
     QByteArray sendCommand(QString cmd);
+//    bool Time
+
+
+    /// EVENT ACTIONS
 
     void actionConnected();
     void actionDisconnected();
@@ -49,6 +60,10 @@ signals:
     void rb_Connected();
     void rb_ConnectFail();
     void rb_Disconnected();
+    void rb_RobotStateRefreshed();
+    void rb_CommandResponseFail(QString cmd);
+    void rb_CommandResponseWrongCommand(QString response);
+    void rb_CommandResponseWrongFormat(QString response);
 
 private:
     QThread::Priority threadPriority;
@@ -61,6 +76,10 @@ private:
 
     QMutex mutexQueue;
     QList<CmdContain> commandQueue;
+    CmdContain lastCommand;
+
+    /// HANS DATA
+    HansRobotState robotState;
 };
 
 }

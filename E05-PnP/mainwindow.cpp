@@ -107,6 +107,11 @@ void MainWindow::robot_UiInitialize() {
         QMessageBox::information(this,lb_robot_dialog_ConnectInfo, lb_robot_dialog_ConnectFail, QMessageBox::Ok);
     });
 
+    connect(hansRobot, &rb::HansClient::rb_RobotStateRefreshed, this, [this] () {
+        rb::HansRobotState state = hansRobot->GetRobotState();
+        qDebug() << state.MachineStateToQString();
+    });
+
     ui->btn_robot_Connect->setText(lb_robot_Connect);
     ui->label_robot_Connect->setText(lb_robot_Disconnected);
 }
@@ -144,60 +149,72 @@ void MainWindow::on_click_robot_connect() {
 }
 
 void MainWindow::on_click_robot_control() {
-    hansRobot->pushCommand(rb::HansCommand::SetOverride(0, 100));
-//    hansRobot->pushCommand(rb::HansCommand::SetUCSByName(0, "Plane_1"));
-//    hansRobot->pushCommand(rb::HansCommand::MoveL(0,
-//                rb::DescartesPoint(0,0,100,180,0,0)));
-//    hansRobot->pushCommand(rb::HansCommand::MoveL(0,
-//                rb::DescartesPoint(100,100,50,180,0,0)));
-//    hansRobot->pushCommand(rb::HansCommand::MoveL(0,
-//                rb::DescartesPoint(-396.255,34,200,180,0,0)));
-
-    for(int i=0;i<100;i++) {
-
-    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-                                rb::DescartesPoint(0,0,100,180,0,0),
-                                rb::JointPoint(0,0,0,0,0,0),
-                                "TCP_dh_gripper",
-                                "Plane_1",
-                                500,
-                                2500,
-                                100,
-                                rb::MoveL,
-                                false, false, 0, true));
-
-    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-                                 rb::DescartesPoint(0,200,100,180,0,0),
-                                 rb::JointPoint(0,0,0,0,0,0),
-                                 "TCP_dh_gripper",
-                                 "Plane_1",
-                                 500,
-                                 2500,
-                                 100,
-                                 rb::MoveL,
-                                 false, false, 0, true));
-
-    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-                                 rb::DescartesPoint(200,200,100,180,0,0),
-                                 rb::JointPoint(0,0,0,0,0,0),
-                                 "TCP_dh_gripper",
-                                 "Plane_1",
-                                 500,
-                                 2500,
-                                 100,
-                                 rb::MoveL,
-                                 false, false, 0, true));
-
-    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-                                 rb::DescartesPoint(200,0,100,180,0,0),
-                                 rb::JointPoint(0,0,0,0,0,0),
-                                 "TCP_dh_gripper",
-                                 "Plane_1",
-                                 500,
-                                 2500,
-                                 100,
-                                 rb::MoveL,
-                                 false, false, 0, true));
-
+    QString raw = "ReadCurFSM,Fail,20007,;";
+    QStringList parsed;
+    if(!(raw.right(2) == ",;")) {
+        return;
     }
+    raw = raw.left(raw.length() - 2);
+    qDebug() << "Raw line: " << raw;
+    parsed = raw.split(',');
+
+    for(int i=0;i<parsed.size();i++) {
+        qDebug() << "After parsed: " << parsed[i].toLower();
+    }
+
+//    int firstSpit = raw.indexOf(',');
+//    QString cmd = raw.mid(0, firstSpit);
+//    raw = raw.right(raw.length() - firstSpit - 1);
+//    qDebug() << "2nd String: " << raw;
+//    QString errorString = raw.mid(0, raw.indexOf(','));
+//    qDebug() << "Command: " << cmd;
+//    qDebug() << "Error report: " << errorString;
+
+//    hansRobot->pushCommand(rb::HansCommand::SetOverride(0, 100));
+
+//    for(int i=0;i<100;i++) {
+//    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+//                                rb::DescartesPoint(0,0,100,180,0,0),
+//                                rb::JointPoint(0,0,0,0,0,0),
+//                                "TCP_dh_gripper",
+//                                "Plane_1",
+//                                500,
+//                                2500,
+//                                100,
+//                                rb::MoveL,
+//                                false, false, 0, true));
+
+//    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+//                                 rb::DescartesPoint(0,200,100,180,0,0),
+//                                 rb::JointPoint(0,0,0,0,0,0),
+//                                 "TCP_dh_gripper",
+//                                 "Plane_1",
+//                                 500,
+//                                 2500,
+//                                 100,
+//                                 rb::MoveL,
+//                                 false, false, 0, true));
+
+//    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+//                                 rb::DescartesPoint(200,200,100,180,0,0),
+//                                 rb::JointPoint(0,0,0,0,0,0),
+//                                 "TCP_dh_gripper",
+//                                 "Plane_1",
+//                                 500,
+//                                 2500,
+//                                 100,
+//                                 rb::MoveL,
+//                                 false, false, 0, true));
+
+//    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+//                                 rb::DescartesPoint(200,0,100,180,0,0),
+//                                 rb::JointPoint(0,0,0,0,0,0),
+//                                 "TCP_dh_gripper",
+//                                 "Plane_1",
+//                                 500,
+//                                 2500,
+//                                 100,
+//                                 rb::MoveL,
+//                                 false, false, 0, true));
+//    }
 }
