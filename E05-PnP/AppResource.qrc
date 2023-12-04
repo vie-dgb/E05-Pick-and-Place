@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icon/camera.ico</file>
+        <file>icon/dashboard.ico</file>
+        <file>icon/gbit.ico</file>
+        <file>icon/robot_arm.ico</file>
+        <file>icon/setting.ico</file>
+    </qresource>
+</RCC>

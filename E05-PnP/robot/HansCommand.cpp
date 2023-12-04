@@ -101,47 +101,47 @@ CmdContain HansCommand::SetBoxAOMode(int index, AnalogPattern pattern) {
 
 CmdContain HansCommand::ReadEI(int robotId, int index) {
     QString cmd = QString::asprintf("ReadEI,%d,%d,;", robotId, index);
-    return CmdContain(cmd);
+    return CmdContain(cmd, index);
 }
 
 CmdContain HansCommand::ReadEO(int robotId, int index) {
     QString cmd = QString::asprintf("ReadEO,%d,%d,;", robotId, index);
-    return CmdContain(cmd);
+    return CmdContain(cmd, index);
 }
 
 CmdContain HansCommand::ReadEAI(int robotId, int index) {
     QString cmd = QString::asprintf("ReadEAI,%d,%d,;", robotId, index);
-    return CmdContain(cmd);
+    return CmdContain(cmd, index);
 }
 
 CmdContain HansCommand::ReadBoxDI(int index) {
     QString cmd = QString::asprintf("ReadBoxDI,%d,;", index);
-    return CmdContain(cmd);
+    return CmdContain(cmd, index);
 }
 
 CmdContain HansCommand::ReadBoxCI(int index) {
     QString cmd = QString::asprintf("ReadBoxCI,%d,;", index);
-    return CmdContain(cmd);
+    return CmdContain(cmd, index);
 }
 
 CmdContain HansCommand::ReadBoxCO(int index) {
     QString cmd = QString::asprintf("ReadBoxCO,%d,;", index);
-    return CmdContain(cmd);
+    return CmdContain(cmd, index);
 }
 
 CmdContain HansCommand::ReadBoxDO(int index) {
     QString cmd = QString::asprintf("ReadBoxDO,%d,;", index);
-    return CmdContain(cmd);
+    return CmdContain(cmd, index);
 }
 
 CmdContain HansCommand::ReadBoxAO(int index) {
     QString cmd = QString::asprintf("ReadBoxAO,%d,;", index);
-    return CmdContain(cmd);
+    return CmdContain(cmd, index);
 }
 
 CmdContain HansCommand::ReadBoxAI(int index) {
     QString cmd = QString::asprintf("ReadBoxAI,%d,;", index);
-    return CmdContain(cmd);
+    return CmdContain(cmd, index);
 }
 
 CmdContain HansCommand::ReadActPos(int robotId) {

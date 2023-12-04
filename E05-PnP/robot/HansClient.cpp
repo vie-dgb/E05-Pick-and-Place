@@ -6,7 +6,9 @@ namespace rb {
 HansClient::HansClient(QThread::Priority _priority) {
     threadPriority = _priority;
     threadRunning = false;
-    hansClientConnected = false;
+    isRobotConnected = false;
+    commandPortState = ConnectState::NotConnect;
+    feedbackPortState = ConnectState::NotConnect;
 }
 
 HansClient::~HansClient() {
@@ -30,11 +32,23 @@ void HansClient::robotDisconnect() {
 }
 
 bool HansClient::robotIsConnected() {
-    return hansClientConnected;
+    return isRobotConnected;
+}
+
+HansData HansClient::GetRobotData() {
+    return robotData;
 }
 
 HansRobotState HansClient::GetRobotState() {
-    return robotState;
+    return robotData.robotState;
+}
+
+bool HansClient::GetRobotBoxDO(int index) {
+    return robotData.BoxDO[index];
+}
+
+bool HansClient::GetRobotBoxDI(int index) {
+    return robotData.BoxDI[index];
 }
 
 void HansClient::pushCommand(CmdContain cmd) {
@@ -46,38 +60,63 @@ void HansClient::pushCommand(CmdContain cmd) {
 void HansClient::run() {
     initClient();
 
-    if(!hansClientConnected) {
+    // close connect when one them connect fail
+    if(!isRobotConnected) {
+        if(commandPort->state() != QAbstractSocket::UnconnectedState) {
+            commandPort->disconnectFromHost();
+            commandPort->waitForDisconnected(5000);
+        }
+        if(feedbackPort->state() == QAbstractSocket::UnconnectedState) {
+            feedbackPort->disconnectFromHost();
+            feedbackPort->waitForDisconnected(5000);
+        }
         return;
     }
 
-    TimeCounter cyclicTimeCounter(100);
-    cyclicTimeCounter.MarkStartPoint();
-
     while(threadRunning) {
-        // send request read robot state
-        if(cyclicTimeCounter.TimeOutCheckingCylic()) {
-            pushCommand(HansCommand::ReadCurFSM(0));
-            pushCommand(HansCommand::ReadRobotState(0));
-        }
-
+        feedbackFromHostHandle();
         commandHandle();
+    }
+
+    // disconnect all port
+    commandPort->disconnectFromHost();
+    feedbackPort->disconnectFromHost();
+    if(commandPort->state() != QAbstractSocket::UnconnectedState) {
+        commandPort->waitForDisconnected(5000);
+    }
+    if(feedbackPort->state() != QAbstractSocket::UnconnectedState) {
+        commandPort->waitForDisconnected(5000);
     }
 }
 
 void HansClient::initClient() {
     commandPort = new QTcpSocket;
+    feedbackPort = new QTcpSocket;
 
     // connect action delete client, connected, disconnected
     connect(this, SIGNAL(finished()), commandPort, SLOT(deleteLater()));
-    connect(commandPort, &QTcpSocket::connected, this, &HansClient::actionConnected);
-    connect(commandPort, &QTcpSocket::disconnected, this, &HansClient::actionDisconnected);
+    connect(commandPort, &QTcpSocket::disconnected, this, &HansClient::actionCommandDisconnected);
+    connect(this, SIGNAL(finished()), feedbackPort, SLOT(deleteLater()));
+    connect(feedbackPort, &QTcpSocket::disconnected, this, &HansClient::actionFeedbackDisconnected);
 
     commandPort->connectToHost(QHostAddress(hostAddress), HANS_COMMAND_PORT);
     if(!commandPort->waitForConnected(HANS_CONNECT_TIMEOUT)) {
-        emit rb_ConnectFail();
-        hansClientConnected = false;
+        commandPortState = ConnectState::ConnectFail;
     } else {
-        hansClientConnected = true;
+        commandPortState = ConnectState::Connected;
+    }
+
+    feedbackPort->connectToHost(QHostAddress(hostAddress), HANS_FEEDBACK_PORT);
+    if(!feedbackPort->waitForConnected(HANS_CONNECT_TIMEOUT)) {
+        feedbackPortState = ConnectState::ConnectFail;
+    } else {
+        feedbackPortState = ConnectState::Connected;
+    }
+
+    actionConnected();
+    if((commandPortState == ConnectState::ConnectFail) ||
+        (feedbackPortState == ConnectState::ConnectFail)) {
+        emit rb_ConnectFail();
     }
 
     queueCommandClear();
@@ -111,6 +150,19 @@ void HansClient::queueCommandPopFront() {
     mutexQueue.unlock();
 }
 
+void HansClient::pushRobotQueryInfo() {
+    mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
+    commandQueue.push_back(HansCommand::ReadCurFSM(0));
+    commandQueue.push_back(HansCommand::ReadRobotState(0));
+    for(int idx=0;idx<HANS_MAX_DO;idx++) {
+        commandQueue.push_back(HansCommand::ReadBoxDO(idx));
+    }
+    for(int idx=0;idx<HANS_MAX_DI;idx++) {
+        commandQueue.push_back(HansCommand::ReadBoxDI(idx));
+    }
+    mutexQueue.unlock();
+}
+
 void HansClient::commandHandle() {
     if(queueCommandIsEmpty()) {
         return;
@@ -119,7 +171,7 @@ void HansClient::commandHandle() {
     lastCommand = queueCommandGetFront();
     QString reply = sendCommand(lastCommand.command);
     responseHandle(reply);
-    qDebug() << reply;
+//    qDebug() << reply;
     queueCommandPopFront();
 }
 
@@ -154,47 +206,178 @@ bool HansClient::responseCommandCheck(QStringList &param) {
     else if(param[0] == CMD_ReadCurFSM) {
         response_ReadCurFSM(param);
     }
+    else if(param[0] == CMD_ReadBoxDI) {
+        response_ReadBoxDI(param);
+    }
+    else if(param[0] == CMD_ReadBoxDO) {
+        response_ReadBoxDO(param);
+    }
     return true;
 }
 
 void HansClient::response_ReadRobotState(QStringList &param) {
-    robotState.IsMoving = (param[2] == "0") ? false : true;
-    robotState.IsPowerOn = (param[3] == "0") ? false : true;
-    robotState.IsError = (param[4] == "0") ? false : true;
-    robotState.ErrorCode = param[5].toInt();
-    robotState.ErrorAxisID = param[6].toInt();
-    robotState.IsBraking = (param[7] == "0") ? false : true;
-    robotState.IsHolding = (param[8] == "0") ? false : true;
-    robotState.IsEmerStopping = (param[9] == "0") ? false : true;
-    robotState.IsSafetyGuardOperate = (param[10] == "0") ? false : true;
-    robotState.ElectrifyState = (param[11] == "0") ? false : true;
-    robotState.IsConnectToBox = (param[12] == "0") ? false : true;
-    robotState.IsBlendingDone = (param[13] == "0") ? false : true;
-    robotState.IsInPosition = (param[14] == "0") ? false : true;
+    robotData.robotState.IsMoving = (param[2] == "0") ? false : true;
+    robotData.robotState.IsPowerOn = (param[3] == "0") ? false : true;
+    robotData.robotState.IsError = (param[4] == "0") ? false : true;
+    robotData.robotState.ErrorCode = param[5].toInt();
+    robotData.robotState.ErrorAxisID = param[6].toInt();
+    robotData.robotState.IsBraking = (param[7] == "0") ? false : true;
+    robotData.robotState.IsHolding = (param[8] == "0") ? false : true;
+    robotData.robotState.IsEmerStopping = (param[9] == "0") ? false : true;
+    robotData.robotState.IsSafetyGuardOperate = (param[10] == "0") ? false : true;
+    robotData.robotState.ElectrifyState = (param[11] == "0") ? false : true;
+    robotData.robotState.IsConnectToBox = (param[12] == "0") ? false : true;
+    robotData.robotState.IsBlendingDone = (param[13] == "0") ? false : true;
+    robotData.robotState.IsInPosition = (param[14] == "0") ? false : true;
 }
 
 void HansClient::response_ReadCurFSM(QStringList &param) {
-    robotState.MachineState = static_cast<HansMachineState>(param[2].toInt());
+    robotData.robotState.MachineState = static_cast<HansMachineState>(param[2].toInt());
+}
+
+void HansClient::response_ReadBoxDI(QStringList &param) {
+    robotData.BoxDI[lastCommand.bitIndex] = (param[2] == "0") ? false : true;
+}
+
+void HansClient::response_ReadBoxDO(QStringList &param) {
+    robotData.BoxDO[lastCommand.bitIndex] = (param[2] == "0") ? false : true;
 }
 
 QByteArray HansClient::sendCommand(QString cmd) {
-//    qDebug() << "Send command: " << cmd;
     commandPort->write(cmd.toUtf8());
     commandPort->waitForBytesWritten(HANS_COMAMND_WRITE_TIMEOUT);
-    commandPort->waitForReadyRead(HANS_COMAMND_READ_TIMEOUT);
+    commandPort->waitForReadyRead(HANS_COMAMND_RESPONSE_TIMEOUT);
     return commandPort->readAll();
 }
 
+void HansClient::feedbackFromHostHandle() {
+    // check feedback timeout or lost connect suddenly
+    if(!feedbackPort->waitForReadyRead(500)) {
+        emit rb_FeedbackPortReadError();
+        threadRunning = false;
+        queueCommandClear();
+        return;
+    }
+
+    // read all byte available on buffer
+    QByteArray raw = feedbackPort->readAll();
+    QByteArray dataSheet;
+    if(raw.isEmpty()) {
+        return;
+    }
+
+    char *pBuffer = raw.data();
+    // get newest data, so check from tail to head
+    for(int index=raw.size() - 13;index>=0;index--) {
+        int headerCheck = charToUint(pBuffer + index);
+        if(headerCheck == headerValue) {
+            int total_Size = charToUint(pBuffer + index + 4);
+            if((index + total_Size) > raw.size()) {
+                continue;
+            }
+            int data_Size = charToUint(pBuffer + index + 8);
+            // just for sure
+            if((total_Size - data_Size) == 12) {
+                dataSheet = raw.mid(index + 12, data_Size);
+                feedbackParseData(dataSheet);
+                break;
+            }
+        }
+    }
+}
+
+void HansClient::feedbackParseData(QByteArray &rawBytes) {
+    const QJsonDocument jsonDoc = QJsonDocument::fromJson(rawBytes);
+    const QJsonValue EndIO = jsonDoc["EndIO"];
+    const QJsonValue ElectricBoxIO = jsonDoc["ElectricBoxIO"];
+    const QJsonValue PosAndVel = jsonDoc["PosAndVel"];
+    const QJsonValue StateAndError = jsonDoc["StateAndError"];
+
+    for(int index=0;index<HANS_MAX_END_DO;index++) {
+        robotData.EndDO[index] = intToBool(EndIO["EndDO"][index].toInt());
+        robotData.EndDI[index] = intToBool(EndIO["EndDI"][index].toInt());
+    }
+
+    for(int index=0;index<HANS_MAX_DO;index++) {
+        robotData.BoxDO[index] = intToBool(ElectricBoxIO["BoxDO"][index].toInt());
+        robotData.BoxDI[index] = intToBool(ElectricBoxIO["BoxDI"][index].toInt());
+    }
+
+    robotData.ActualOverride = PosAndVel["Actual_Override"][0].toDouble();
+
+    robotData.ActualJoint.J1 = PosAndVel["Actual_Position"][0].toDouble();
+    robotData.ActualJoint.J2 = PosAndVel["Actual_Position"][1].toDouble();
+    robotData.ActualJoint.J3 = PosAndVel["Actual_Position"][2].toDouble();
+    robotData.ActualJoint.J4 = PosAndVel["Actual_Position"][3].toDouble();
+    robotData.ActualJoint.J5 = PosAndVel["Actual_Position"][4].toDouble();
+    robotData.ActualJoint.J6 = PosAndVel["Actual_Position"][5].toDouble();
+
+    robotData.ActualPosition.X = PosAndVel["Actual_Position"][6].toDouble();
+    robotData.ActualPosition.Y = PosAndVel["Actual_Position"][7].toDouble();
+    robotData.ActualPosition.Z = PosAndVel["Actual_Position"][8].toDouble();
+    robotData.ActualPosition.rX = PosAndVel["Actual_Position"][9].toDouble();
+    robotData.ActualPosition.rY = PosAndVel["Actual_Position"][10].toDouble();
+    robotData.ActualPosition.rZ = PosAndVel["Actual_Position"][11].toDouble();
+
+    robotData.robotState.MachineState = static_cast<HansMachineState>(StateAndError["robotState"].toInt());
+    robotData.robotState.IsMoving = StateAndError["robotMoving"].toBool();
+    robotData.robotState.IsPowerOn = StateAndError["robotEnabled"].toBool();
+    robotData.robotState.ErrorCode = StateAndError["Error_Code"].toInt();
+    if(robotData.robotState.ErrorCode != 0) {
+        robotData.robotState.IsError = (robotData.robotState.ErrorCode != 0) ? true : false;
+    }
+    robotData.robotState.ErrorAxisID = StateAndError["Error_AxisID"].toInt();
+    robotData.robotState.IsBraking = StateAndError["robotEnabled"][0].toBool();
+//    robotData.robotState.IsHolding = StateAndError["robotEnabled"].toBool();
+    robotData.robotState.IsEmerStopping = (robotData.robotState.MachineState == HansMachineState::EmergencyStop) ? true : false;
+    robotData.robotState.IsSafetyGuardOperate = StateAndError["robotEnabled"].toBool();
+//    robotData.robotState.ElectrifyState = StateAndError["robotEnabled"].toBool();
+//    robotData.robotState.IsConnectToBox = StateAndError["robotEnabled"].toBool();
+    robotData.robotState.IsBlendingDone = StateAndError["robotBlendingDone"].toBool();
+    robotData.robotState.IsInPosition = StateAndError["InPos"].toBool();
+}
+
+int HansClient::charToUint(char* pBuffer) {
+    int value = pBuffer[3]&0xFF;
+    value <<= 8;
+    value |= pBuffer[2]&0xFF;
+    value <<= 8;
+    value |= pBuffer[1]&0xFF;
+    value <<= 8;
+    value |= pBuffer[0]&0xFF;
+    return value;
+}
+
+bool HansClient::intToBool(int value) {
+    return (value == 0) ? false : true;
+}
+
+//////// SLOT ACTIONS
+
+void HansClient::actionCommandDisconnected() {
+    commandPortState = ConnectState::NotConnect;
+    actionDisconnected();
+}
+
+void HansClient::actionFeedbackDisconnected() {
+    feedbackPortState = ConnectState::NotConnect;
+    actionDisconnected();
+}
+
 void HansClient::actionConnected() {
-    emit rb_Connected();
+    if((commandPortState == ConnectState::Connected) &&
+        (feedbackPortState == ConnectState::Connected)) {
+        isRobotConnected = true;
+        emit rb_Connected();
+    }
 }
 
 void HansClient::actionDisconnected() {
-    threadRunning = false;
-    emit rb_Disconnected();
-    hansClientConnected = false;
-    quit();
-    wait();
+    isRobotConnected = false;
+    if((commandPortState == ConnectState::NotConnect) &&
+        (feedbackPortState == ConnectState::NotConnect)) {
+        emit rb_Disconnected();
+    }
 }
 
 }

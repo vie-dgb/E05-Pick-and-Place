@@ -7,18 +7,19 @@
 #include <QTcpSocket>
 #include <QMutex>
 
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonValueConstRef>
+#include <QJsonValue>
+
+#include "HansDefine.h"
 #include "HansCommand.h"
 #include "TimeCounter.h"
 
 using namespace std::chrono;
 
 namespace rb {
-
-#define HANS_COMMAND_PORT           10003
-#define HANS_CONNECT_TIMEOUT        2000
-#define HANS_MUTEX_LOCK_TIMEOUT     50
-#define HANS_COMAMND_WRITE_TIMEOUT  1000
-#define HANS_COMAMND_READ_TIMEOUT   5000
 
 class HansClient : public QThread
 {
@@ -30,8 +31,14 @@ public:
     void robotConnect(QString address);
     void robotDisconnect();
     bool robotIsConnected();
+    HansData GetRobotData();
     HansRobotState GetRobotState();
+    bool GetRobotBoxDO(int index);
+    bool GetRobotBoxDI(int index);
     void pushCommand(CmdContain cmd);
+
+    /// Optional functions
+
 
 private:
     void run() override;
@@ -40,19 +47,28 @@ private:
     void queueCommandClear();
     CmdContain queueCommandGetFront();
     void queueCommandPopFront();
+    void pushRobotQueryInfo();
     void commandHandle();
 
     void responseHandle(QString raw);
     bool responseCommandCheck(QStringList &param);
     void response_ReadRobotState(QStringList &param);
     void response_ReadCurFSM(QStringList &param);
+    void response_ReadBoxDI(QStringList &param);
+    void response_ReadBoxDO(QStringList &param);
 
     QByteArray sendCommand(QString cmd);
-//    bool Time
+
+    /// FEEDBACKS PARSE
+    void feedbackFromHostHandle();
+    void feedbackParseData(QByteArray &rawBytes);
+    int charToUint(char* pBuffer);
+    bool intToBool(int value);
 
 
     /// EVENT ACTIONS
-
+    void actionCommandDisconnected();
+    void actionFeedbackDisconnected();
     void actionConnected();
     void actionDisconnected();
 
@@ -61,6 +77,7 @@ signals:
     void rb_ConnectFail();
     void rb_Disconnected();
     void rb_RobotStateRefreshed();
+    void rb_FeedbackPortReadError();
     void rb_CommandResponseFail(QString cmd);
     void rb_CommandResponseWrongCommand(QString response);
     void rb_CommandResponseWrongFormat(QString response);
@@ -70,16 +87,22 @@ private:
     bool threadRunning;
 
     QTcpSocket *commandPort;
+    QTcpSocket *feedbackPort;
     QString hostAddress;
 
-    bool hansClientConnected;
+    bool isRobotConnected;
+    ConnectState commandPortState;
+    ConnectState feedbackPortState;
 
     QMutex mutexQueue;
     QList<CmdContain> commandQueue;
     CmdContain lastCommand;
 
+    const char header[4] = {'L', 'T', 'B', 'R'};
+    const int headerValue = charToUint((char *)header);
+
     /// HANS DATA
-    HansRobotState robotState;
+    HansData robotData;
 };
 
 }

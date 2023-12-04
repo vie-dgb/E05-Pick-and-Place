@@ -6,19 +6,16 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    // initialize ui language
+
+    initUiEvent();
+    connectUiEvent();
     ui_Language_Init();
-
-    // connect event button
-    connect(ui->btn_robot_Connect, &QPushButton::clicked, this, &MainWindow::on_click_robot_connect);
-    connect(ui->btn_robot_Control, &QPushButton::clicked, this, &MainWindow::on_click_robot_control);
-
-    // init robot
     robot_UiInitialize();
 }
 
 MainWindow::~MainWindow()
 {
+    delete updateInfoTimer;
     delete ui;
 }
 
@@ -38,24 +35,31 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     event->accept();
 }
 
+void MainWindow::initUiEvent() {
+    updateInfoTimer = new QTimer;
+    updateInfoTimer->setInterval(updateCyclicTime);
+    updateInfoTimer->start();
+}
+
+void MainWindow::connectUiEvent() {
+    /// TIMER EVENTS
+    connect(updateInfoTimer, &QTimer::timeout, this, &MainWindow::on_Timeout_UpdateUiInfo);
+
+    /// COMBOBOX EVENTS
+    connect(ui->comboBox_Language, &QComboBox::currentIndexChanged, this, &MainWindow::ui_Language_Load);
+
+    /// BUTTON EVENTS
+    connect(ui->btn_robot_Connect, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_Connect);
+}
+
 void MainWindow::ui_Language_Init() {
     // normal UI language is English
     currentLanguage = LanguagesUI::EN;
-
-    connect(ui->actionEnglish, &QAction::triggered, this, [this]() {
-        ui_Language_Load(LanguagesUI::EN);
-    });
-    connect(ui->actionJapanese, &QAction::triggered, this, [this]() {
-        ui_Language_Load(LanguagesUI::JP);
-    });
-    connect(ui->actionVietnamese, &QAction::triggered, this, [this]() {
-        ui_Language_Load(LanguagesUI::VN);
-    });
-
     this->setWindowTitle("Han's E05 pick and place control application");
 }
 
-void MainWindow::ui_Language_Load(const LanguagesUI lang) {
+void MainWindow::ui_Language_Load(const int index) {
+    LanguagesUI lang = static_cast<LanguagesUI>(index);
     if(currentLanguage == lang) {
         return;
     }
@@ -106,11 +110,41 @@ void MainWindow::robot_UiInitialize() {
         ui->label_robot_Connect->setText(lb_robot_Disconnected);
         QMessageBox::information(this,lb_robot_dialog_ConnectInfo, lb_robot_dialog_ConnectFail, QMessageBox::Ok);
     });
-
-    connect(hansRobot, &rb::HansClient::rb_RobotStateRefreshed, this, [this] () {
-        rb::HansRobotState state = hansRobot->GetRobotState();
-        qDebug() << state.MachineStateToQString();
+    // robot lost connect
+    connect(hansRobot, &rb::HansClient::rb_FeedbackPortReadError, this, [this] () {
+        ui->label_robot_Connect->setText(lb_robot_Disconnected);
+        QMessageBox::information(this,lb_robot_dialog_ConnectInfo, lb_robot_dialog_LostConnect, QMessageBox::Ok);
     });
+
+    // robot change box digiatal output
+    connect(ui->radioButton_DO_0, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(0, state));
+    });
+    connect(ui->radioButton_DO_1, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(1, state));
+    });
+    connect(ui->radioButton_DO_2, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(2, state));
+    });
+    connect(ui->radioButton_DO_3, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(3, state));
+    });
+    connect(ui->radioButton_DO_4, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(4, state));
+    });
+    connect(ui->radioButton_DO_5, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(5, state));
+    });
+    connect(ui->radioButton_DO_6, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(6, state));
+    });
+    connect(ui->radioButton_DO_7, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(7, state));
+    });
+
+//    connect(hansRobot, &rb::HansClient::rb_RobotStateRefreshed, this, [this] () {
+//        rb::HansRobotState state = hansRobot->GetRobotState();
+//    });
 
     ui->btn_robot_Connect->setText(lb_robot_Connect);
     ui->label_robot_Connect->setText(lb_robot_Disconnected);
@@ -120,7 +154,6 @@ bool MainWindow::robot_UserInputAddress() {
     // setup input dialog form
     InputFormDialog::FormData data;
     data[lb_robot_dialog_Address] = robotAddress;
-
     while(true) {
         if(InputFormDialog::getInput("Enter Han's robot address", data)) {
             QHostAddress h_address(data.at<QString>(lb_robot_dialog_Address));
@@ -135,8 +168,43 @@ bool MainWindow::robot_UserInputAddress() {
     }
 }
 
-//////////  BUTTON ACTION
-void MainWindow::on_click_robot_connect() {
+void MainWindow::robot_UiUpdate() {
+    if(ui->tab_RobotHans->isHidden()) {
+        return;
+    }
+
+    rb::HansRobotState robotState = hansRobot->GetRobotState();
+    ui->label_robot_MachineState->setText(lb_robot_StateMachine + ": " + robotState.MachineStateToQString());
+    /// refresh Box digital input state
+    ui->radioButton_DI_0->setChecked(hansRobot->GetRobotBoxDI(0));
+    ui->radioButton_DI_1->setChecked(hansRobot->GetRobotBoxDI(1));
+    ui->radioButton_DI_2->setChecked(hansRobot->GetRobotBoxDI(2));
+    ui->radioButton_DI_3->setChecked(hansRobot->GetRobotBoxDI(3));
+    ui->radioButton_DI_4->setChecked(hansRobot->GetRobotBoxDI(4));
+    ui->radioButton_DI_5->setChecked(hansRobot->GetRobotBoxDI(5));
+    ui->radioButton_DI_6->setChecked(hansRobot->GetRobotBoxDI(6));
+    ui->radioButton_DI_7->setChecked(hansRobot->GetRobotBoxDI(7));
+    /// refresh Box digital output state
+    ui->radioButton_DO_0->setChecked(hansRobot->GetRobotBoxDO(0));
+    ui->radioButton_DO_1->setChecked(hansRobot->GetRobotBoxDO(1));
+    ui->radioButton_DO_2->setChecked(hansRobot->GetRobotBoxDO(2));
+    ui->radioButton_DO_3->setChecked(hansRobot->GetRobotBoxDO(3));
+    ui->radioButton_DO_4->setChecked(hansRobot->GetRobotBoxDO(4));
+    ui->radioButton_DO_5->setChecked(hansRobot->GetRobotBoxDO(5));
+    ui->radioButton_DO_6->setChecked(hansRobot->GetRobotBoxDO(6));
+    ui->radioButton_DO_7->setChecked(hansRobot->GetRobotBoxDO(7));
+}
+
+//////////  TIMER ACTIONS
+void MainWindow::on_Timeout_UpdateUiInfo() {
+    if(hansRobot->robotIsConnected()) {
+        // update robot info in UI
+        robot_UiUpdate();
+    }
+}
+
+//////////  BUTTON ACTIONS
+void MainWindow::on_Click_Robot_Connect() {
     if(hansRobot->robotIsConnected()) {
         hansRobot->robotDisconnect();
     }
@@ -148,73 +216,60 @@ void MainWindow::on_click_robot_connect() {
     }
 }
 
-void MainWindow::on_click_robot_control() {
-    QString raw = "ReadCurFSM,Fail,20007,;";
-    QStringList parsed;
-    if(!(raw.right(2) == ",;")) {
-        return;
-    }
-    raw = raw.left(raw.length() - 2);
-    qDebug() << "Raw line: " << raw;
-    parsed = raw.split(',');
+//void MainWindow::on_click_robot_control() {
+////    int firstSpit = raw.indexOf(',');
+////    QString cmd = raw.mid(0, firstSpit);
+////    raw = raw.right(raw.length() - firstSpit - 1);
+////    qDebug() << "2nd String: " << raw;
+////    QString errorString = raw.mid(0, raw.indexOf(','));
+////    qDebug() << "Command: " << cmd;
+////    qDebug() << "Error report: " << errorString;
 
-    for(int i=0;i<parsed.size();i++) {
-        qDebug() << "After parsed: " << parsed[i].toLower();
-    }
+////    hansRobot->pushCommand(rb::HansCommand::SetOverride(0, 100));
 
-//    int firstSpit = raw.indexOf(',');
-//    QString cmd = raw.mid(0, firstSpit);
-//    raw = raw.right(raw.length() - firstSpit - 1);
-//    qDebug() << "2nd String: " << raw;
-//    QString errorString = raw.mid(0, raw.indexOf(','));
-//    qDebug() << "Command: " << cmd;
-//    qDebug() << "Error report: " << errorString;
+////    for(int i=0;i<100;i++) {
+////    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+////                                rb::DescartesPoint(0,0,100,180,0,0),
+////                                rb::JointPoint(0,0,0,0,0,0),
+////                                "TCP_dh_gripper",
+////                                "Plane_1",
+////                                500,
+////                                2500,
+////                                100,
+////                                rb::MoveL,
+////                                false, false, 0, true));
 
-//    hansRobot->pushCommand(rb::HansCommand::SetOverride(0, 100));
+////    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+////                                 rb::DescartesPoint(0,200,100,180,0,0),
+////                                 rb::JointPoint(0,0,0,0,0,0),
+////                                 "TCP_dh_gripper",
+////                                 "Plane_1",
+////                                 500,
+////                                 2500,
+////                                 100,
+////                                 rb::MoveL,
+////                                 false, false, 0, true));
 
-//    for(int i=0;i<100;i++) {
-//    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-//                                rb::DescartesPoint(0,0,100,180,0,0),
-//                                rb::JointPoint(0,0,0,0,0,0),
-//                                "TCP_dh_gripper",
-//                                "Plane_1",
-//                                500,
-//                                2500,
-//                                100,
-//                                rb::MoveL,
-//                                false, false, 0, true));
+////    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+////                                 rb::DescartesPoint(200,200,100,180,0,0),
+////                                 rb::JointPoint(0,0,0,0,0,0),
+////                                 "TCP_dh_gripper",
+////                                 "Plane_1",
+////                                 500,
+////                                 2500,
+////                                 100,
+////                                 rb::MoveL,
+////                                 false, false, 0, true));
 
-//    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-//                                 rb::DescartesPoint(0,200,100,180,0,0),
-//                                 rb::JointPoint(0,0,0,0,0,0),
-//                                 "TCP_dh_gripper",
-//                                 "Plane_1",
-//                                 500,
-//                                 2500,
-//                                 100,
-//                                 rb::MoveL,
-//                                 false, false, 0, true));
-
-//    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-//                                 rb::DescartesPoint(200,200,100,180,0,0),
-//                                 rb::JointPoint(0,0,0,0,0,0),
-//                                 "TCP_dh_gripper",
-//                                 "Plane_1",
-//                                 500,
-//                                 2500,
-//                                 100,
-//                                 rb::MoveL,
-//                                 false, false, 0, true));
-
-//    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-//                                 rb::DescartesPoint(200,0,100,180,0,0),
-//                                 rb::JointPoint(0,0,0,0,0,0),
-//                                 "TCP_dh_gripper",
-//                                 "Plane_1",
-//                                 500,
-//                                 2500,
-//                                 100,
-//                                 rb::MoveL,
-//                                 false, false, 0, true));
-//    }
-}
+////    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
+////                                 rb::DescartesPoint(200,0,100,180,0,0),
+////                                 rb::JointPoint(0,0,0,0,0,0),
+////                                 "TCP_dh_gripper",
+////                                 "Plane_1",
+////                                 500,
+////                                 2500,
+////                                 100,
+////                                 rb::MoveL,
+////                                 false, false, 0, true));
+////    }
+//}

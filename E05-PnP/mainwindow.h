@@ -5,6 +5,7 @@
 #include <QCloseEvent>
 #include <QTranslator>
 #include <QMessageBox>
+#include <QTimer>
 
 #include "dialog/InputFormDialog.h"
 #include "robot/HansClient.h"
@@ -19,9 +20,9 @@ class MainWindow : public QMainWindow
 
 public:
     enum LanguagesUI {
-        VN = 1,
-        EN,
-        JP
+        EN = 0,
+        JP,
+        VN
     };
 
     MainWindow(QWidget *parent = nullptr);
@@ -30,25 +31,34 @@ public:
 private:
     /// MAINWINDOW EVENT HANDLE FUNCTIONS
     void closeEvent(QCloseEvent *event) override;
+    void initUiEvent();
+    void connectUiEvent();
 
     /// UI LANGUAGE HANDLE FUNCTIONS
     void ui_Language_Init();
-    void ui_Language_Load(const LanguagesUI lang);
+    void ui_Language_Load(const int index);
 
     /// ROBOT UI FUNTIONS
     void robot_UiInitialize();
     bool robot_UserInputAddress();
+    void robot_UiUpdate();
+
+    /// TIMER ACTIONS
+    void on_Timeout_UpdateUiInfo();
 
     /// BUTTON ACTIONS
-    void on_click_robot_connect();
-    void on_click_robot_control();
+    void on_Click_Robot_Connect();
 
 private:
     Ui::MainWindow *ui;
-    // LANGUAGE
+    QTimer *updateInfoTimer;
+    const int updateCyclicTime = 400;
+
+    /// LANGUAGE
     QTranslator uiTranslator;
     LanguagesUI currentLanguage;
 
+    /// HANS ROBOT
     rb::HansClient *hansRobot;
     QString robotAddress;
 
@@ -58,6 +68,7 @@ private:
     const QString lb_robot_Connected = "E05 Connected";
     const QString lb_robot_Disconnected = "E05 No Connection";
     const QString lb_robot_WaitConnect = "E05 Connecting";
+    const QString lb_robot_StateMachine = "Robot state";
     const QString lb_robot_dialog_Address = "Ip address";
     const QString lb_robot_dialog_ConnectFail = "E05 connect fail. \nPlease check robot address.";
     const QString lb_robot_dialog_LostConnect = "E05 lost connect. \nPlease restart the robot's power.";

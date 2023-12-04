@@ -9,7 +9,6 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    RobotDashboard.cpp \
     dialog/InputFormDialog.cpp \
     dialog/SetColorButton.cpp \
     main.cpp \
@@ -19,16 +18,15 @@ SOURCES += \
     robot/TimeCounter.cpp
 
 HEADERS += \
-    RobotDashboard.h \
     dialog/InputFormDialog.h \
     dialog/SetColorButton.h \
     mainwindow.h \
     robot/HansClient.h \
     robot/HansCommand.h \
+    robot/HansDefine.h \
     robot/TimeCounter.h
 
 FORMS += \
-    RobotDashboard.ui \
     mainwindow.ui
 
 TRANSLATIONS += \
@@ -41,3 +39,8 @@ CONFIG += embed_translations
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+RESOURCES += \
+    AppResource.qrc
+
+RC_ICONS = icon/gbit.ico
