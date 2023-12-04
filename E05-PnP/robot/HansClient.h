@@ -38,7 +38,10 @@ public:
     void pushCommand(CmdContain cmd);
 
     /// Optional functions
-
+    void DHGripper_Setup(int input1, int input2, int output1, int output2);
+    void DHGripper_Open();
+    void DHGripper_Close();
+    bool DHGripper_IsOpen();
 
 private:
     void run() override;
@@ -103,6 +106,9 @@ private:
 
     /// HANS DATA
     HansData robotData;
+
+    /// DH-GRIPPER
+    DH_Gripper gripper;
 };
 
 }

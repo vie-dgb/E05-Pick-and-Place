@@ -74,7 +74,7 @@ CmdContain HansCommand::SetOverride(int robotId, int override) {
 }
 
 CmdContain HansCommand::SetEndDO(int robotId, int index, bool state) {
-    QString cmd = QString::asprintf("SetEndDO,%d,%d,ioState,;", robotId, index,
+    QString cmd = QString::asprintf("SetEndDO,%d,%d,%d,;", robotId, index,
                                     ((state) ? 1 : 0));
     return CmdContain(cmd);
 }

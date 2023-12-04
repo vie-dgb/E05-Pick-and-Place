@@ -142,6 +142,16 @@ void MainWindow::robot_UiInitialize() {
         hansRobot->pushCommand(rb::HansCommand::SetBoxDO(7, state));
     });
 
+    // robot gripper toggle
+    hansRobot->DHGripper_Setup(0, 1, 0, 1);
+    connect(ui->btn_robot_gripperToggle, &QPushButton::clicked, this, [this] {
+        if(hansRobot->DHGripper_IsOpen()) {
+            hansRobot->DHGripper_Close();
+        } else {
+            hansRobot->DHGripper_Open();
+        }
+    });
+
 //    connect(hansRobot, &rb::HansClient::rb_RobotStateRefreshed, this, [this] () {
 //        rb::HansRobotState state = hansRobot->GetRobotState();
 //    });

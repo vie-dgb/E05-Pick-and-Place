@@ -57,6 +57,30 @@ void HansClient::pushCommand(CmdContain cmd) {
     mutexQueue.unlock();
 }
 
+void HansClient::DHGripper_Setup(int input1, int input2, int output1, int output2) {
+    gripper.Input_1 = input1;
+    gripper.Input_2 = input2;
+    gripper.Ouput_1 = output1;
+    gripper.Ouput_2 = output2;
+}
+
+void HansClient::DHGripper_Open() {
+    pushCommand(HansCommand::SetEndDO(0, gripper.Ouput_1, true));
+}
+
+void HansClient::DHGripper_Close() {
+    pushCommand(HansCommand::SetEndDO(0, gripper.Ouput_1, false));
+    pushCommand(HansCommand::SetEndDO(0, gripper.Ouput_2, false));
+}
+
+bool HansClient::DHGripper_IsOpen() {
+    if(robotData.EndDO[gripper.Ouput_1] || robotData.EndDO[gripper.Ouput_2]) {
+        return true;
+    }
+    return false;
+}
+
+/////// PRIVATE FUNCTIONS
 void HansClient::run() {
     initClient();
 
@@ -169,9 +193,10 @@ void HansClient::commandHandle() {
     }
 
     lastCommand = queueCommandGetFront();
+    qDebug() << lastCommand.command;
     QString reply = sendCommand(lastCommand.command);
     responseHandle(reply);
-//    qDebug() << reply;
+    qDebug() << reply;
     queueCommandPopFront();
 }
 
@@ -244,6 +269,7 @@ void HansClient::response_ReadBoxDO(QStringList &param) {
 }
 
 QByteArray HansClient::sendCommand(QString cmd) {
+//    commandPort->skip(commandPort->bytesAvailable());
     commandPort->write(cmd.toUtf8());
     commandPort->waitForBytesWritten(HANS_COMAMND_WRITE_TIMEOUT);
     commandPort->waitForReadyRead(HANS_COMAMND_RESPONSE_TIMEOUT);

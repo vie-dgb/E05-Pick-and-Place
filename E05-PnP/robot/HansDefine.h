@@ -5,8 +5,8 @@
 #define HANS_FEEDBACK_PORT              10004
 #define HANS_CONNECT_TIMEOUT            2000
 #define HANS_MUTEX_LOCK_TIMEOUT         50
-#define HANS_COMAMND_WRITE_TIMEOUT      100
-#define HANS_COMAMND_RESPONSE_TIMEOUT   50
+#define HANS_COMAMND_WRITE_TIMEOUT      200
+#define HANS_COMAMND_RESPONSE_TIMEOUT   1000
 #define HANS_MAX_END_DO                 4
 #define HANS_MAX_END_DI                 8
 #define HANS_MAX_DO                     8
@@ -314,6 +314,25 @@ struct HansData
     HansRobotState robotState;
 
     HansData() {}
+};
+
+
+enum DH_GripperState : int {
+    Gripper_Moving = 0,
+    Gripper_Arrived,
+    Gripper_Catched,
+    Gripper_Dropped
+};
+
+struct DH_Gripper
+{
+    int Ouput_1 = 0;
+    int Ouput_2 = 0;
+    int Input_1 = 0;
+    int Input_2 = 0;
+    DH_GripperState lastState = DH_GripperState::Gripper_Arrived;
+
+    DH_Gripper() {}
 };
 
 }
