@@ -37,21 +37,29 @@ public:
     bool GetRobotBoxDI(int index);
     void pushCommand(CmdContain cmd);
 
+    /// In-App control functions
+    void SetVirtualDI(int index, bool state);
+    bool GetVirtualDI(int index);
+
     /// Optional functions
     void DHGripper_Setup(int input1, int input2, int output1, int output2);
     void DHGripper_Open();
     void DHGripper_Close();
+    void DHGripper_Toggle();
     bool DHGripper_IsOpen();
+    DH_GripperState DHGripper_GetState();
 
 private:
     void run() override;
     void initClient();
+    void closeAllConnect();
     bool queueCommandIsEmpty();
     void queueCommandClear();
     CmdContain queueCommandGetFront();
     void queueCommandPopFront();
     void pushRobotQueryInfo();
     void commandHandle();
+    void inAppCommandHandle();
 
     void responseHandle(QString raw);
     bool responseCommandCheck(QStringList &param);
@@ -84,6 +92,7 @@ signals:
     void rb_CommandResponseFail(QString cmd);
     void rb_CommandResponseWrongCommand(QString response);
     void rb_CommandResponseWrongFormat(QString response);
+    void rb_VirtualDO_ChangeState(int index, bool state);
 
 private:
     QThread::Priority threadPriority;
@@ -106,9 +115,14 @@ private:
 
     /// HANS DATA
     HansData robotData;
+    bool VirtualDI[8] = { false, false, false, false, false, false, false, false};
+    bool VirtualDO[8] = { false, false, false, false, false, false, false, false};
 
     /// DH-GRIPPER
     DH_Gripper gripper;
+
+    /// Timer counter
+    TimeCounter timeCounter;
 };
 
 }

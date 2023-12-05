@@ -1,6 +1,8 @@
 #ifndef HANSDEFINE_H
 #define HANSDEFINE_H
 
+#include <QString>
+
 #define HANS_COMMAND_PORT               10003
 #define HANS_FEEDBACK_PORT              10004
 #define HANS_CONNECT_TIMEOUT            2000
@@ -17,6 +19,15 @@
 #define CMD_ReadCurFSM              "ReadCurFSM"
 #define CMD_ReadBoxDI               "ReadBoxDI"
 #define CMD_ReadBoxDO               "ReadBoxDO"
+
+#define CMD_WaitTime                "WaitTime"
+#define CMD_WaitVirtualDI           "WaitVirtualDI"
+#define CMD_WaitBoxDO               "WaitBoxDO"
+#define CMD_WaitBoxDI               "WaitBoxDI"
+#define CMD_WaitEndDO               "WaitEndDO"
+#define CMD_WaitEndDI               "WaitEndDI"
+#define CMD_WaitMoveDone            "WaitMoveDone"
+#define CMD_SetVirtualDO            "SetVirtualDO"
 
 namespace rb {
 
@@ -226,20 +237,36 @@ struct HansRobotState
     }
 };
 
+enum HansCmdType : int {
+    Cmd_InApp = 0,
+    Cmd_Remote
+};
+
 struct CmdContain
 {
+    HansCmdType type = HansCmdType::Cmd_Remote;
     QString command = "";
     int bitIndex = 0;
+    bool bitState = false;
 
     CmdContain() {}
 
-    CmdContain(QString cmd) {
+    CmdContain(HansCmdType cmdType, QString cmd) {
+        type = cmdType;
         command = cmd;
     }
 
-    CmdContain(QString cmd, int _bitIndex) {
+    CmdContain(HansCmdType cmdType, QString cmd, int _bitIndex) {
+        type = cmdType;
         command = cmd;
         bitIndex = _bitIndex;
+    }
+
+    CmdContain(HansCmdType cmdType, QString cmd, int _bitIndex, bool _bitState) {
+        type = cmdType;
+        command = cmd;
+        bitIndex = _bitIndex;
+        bitState = _bitState;
     }
 };
 
@@ -333,6 +360,29 @@ struct DH_Gripper
     DH_GripperState lastState = DH_GripperState::Gripper_Arrived;
 
     DH_Gripper() {}
+
+    bool isOpen(bool state_out1, bool state_out2) {
+        if((!state_out1) && (!state_out2)) {
+            return true;
+        }
+        return false;
+    }
+
+    DH_GripperState getState(bool state_in1, bool state_in2) {
+        if((state_in1) && (!state_in2)) {
+            lastState = DH_GripperState::Gripper_Arrived;
+        }
+        else if((!state_in1) && (state_in2)) {
+            lastState = DH_GripperState::Gripper_Catched;
+        }
+        else if(state_in1 && state_in2) {
+            lastState = DH_GripperState::Gripper_Dropped;
+        }
+        else {
+            lastState = DH_GripperState::Gripper_Moving;
+        }
+        return lastState;
+    }
 };
 
 }

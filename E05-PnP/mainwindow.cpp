@@ -48,8 +48,37 @@ void MainWindow::connectUiEvent() {
     /// COMBOBOX EVENTS
     connect(ui->comboBox_Language, &QComboBox::currentIndexChanged, this, &MainWindow::ui_Language_Load);
 
+    /// RADIO BUTTON
+    connect(ui->radioButton_DO_0, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(0, state));
+    });
+    connect(ui->radioButton_DO_1, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(1, state));
+    });
+    connect(ui->radioButton_DO_2, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(2, state));
+    });
+    connect(ui->radioButton_DO_3, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(3, state));
+    });
+    connect(ui->radioButton_DO_4, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(4, state));
+    });
+    connect(ui->radioButton_DO_5, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(5, state));
+    });
+    connect(ui->radioButton_DO_6, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(6, state));
+    });
+    connect(ui->radioButton_DO_7, &QRadioButton::clicked, this, [this] (bool state) {
+        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(7, state));
+    });
+
     /// BUTTON EVENTS
     connect(ui->btn_robot_Connect, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_Connect);
+    connect(ui->btn_robot_enable, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_Enable);
+    connect(ui->btn_robot_close, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_Close);
+    connect(ui->btn_robot_gripperToggle, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_GripperToggle);
 }
 
 void MainWindow::ui_Language_Init() {
@@ -116,45 +145,7 @@ void MainWindow::robot_UiInitialize() {
         QMessageBox::information(this,lb_robot_dialog_ConnectInfo, lb_robot_dialog_LostConnect, QMessageBox::Ok);
     });
 
-    // robot change box digiatal output
-    connect(ui->radioButton_DO_0, &QRadioButton::clicked, this, [this] (bool state) {
-        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(0, state));
-    });
-    connect(ui->radioButton_DO_1, &QRadioButton::clicked, this, [this] (bool state) {
-        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(1, state));
-    });
-    connect(ui->radioButton_DO_2, &QRadioButton::clicked, this, [this] (bool state) {
-        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(2, state));
-    });
-    connect(ui->radioButton_DO_3, &QRadioButton::clicked, this, [this] (bool state) {
-        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(3, state));
-    });
-    connect(ui->radioButton_DO_4, &QRadioButton::clicked, this, [this] (bool state) {
-        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(4, state));
-    });
-    connect(ui->radioButton_DO_5, &QRadioButton::clicked, this, [this] (bool state) {
-        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(5, state));
-    });
-    connect(ui->radioButton_DO_6, &QRadioButton::clicked, this, [this] (bool state) {
-        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(6, state));
-    });
-    connect(ui->radioButton_DO_7, &QRadioButton::clicked, this, [this] (bool state) {
-        hansRobot->pushCommand(rb::HansCommand::SetBoxDO(7, state));
-    });
-
-    // robot gripper toggle
     hansRobot->DHGripper_Setup(0, 1, 0, 1);
-    connect(ui->btn_robot_gripperToggle, &QPushButton::clicked, this, [this] {
-        if(hansRobot->DHGripper_IsOpen()) {
-            hansRobot->DHGripper_Close();
-        } else {
-            hansRobot->DHGripper_Open();
-        }
-    });
-
-//    connect(hansRobot, &rb::HansClient::rb_RobotStateRefreshed, this, [this] () {
-//        rb::HansRobotState state = hansRobot->GetRobotState();
-//    });
 
     ui->btn_robot_Connect->setText(lb_robot_Connect);
     ui->label_robot_Connect->setText(lb_robot_Disconnected);
@@ -185,6 +176,33 @@ void MainWindow::robot_UiUpdate() {
 
     rb::HansRobotState robotState = hansRobot->GetRobotState();
     ui->label_robot_MachineState->setText(lb_robot_StateMachine + ": " + robotState.MachineStateToQString());
+    switch (robotState.MachineState) {
+    case HansMachineState::Disable:
+        ui->btn_robot_enable->setText("Enable");
+        ui->btn_robot_enable->setEnabled(true);
+        break;
+    case HansMachineState::StandBy:
+        ui->btn_robot_enable->setText("Disable");
+        break;
+    case HansMachineState::Blackout_48V:
+        ui->btn_robot_enable->setText("Open");
+        break;
+    case HansMachineState::EmergencyStop:
+        ui->btn_robot_enable->setText("Reset");
+        break;
+    case HansMachineState::Electrifying48V:
+        ui->btn_robot_enable->setText("Waiting");
+        ui->btn_robot_enable->setEnabled(false);
+        break;
+    }
+
+    if(hansRobot->DHGripper_IsOpen()) {
+        ui->btn_robot_gripperToggle->setText("Close gripper");
+    }
+    else {
+        ui->btn_robot_gripperToggle->setText("Open gripper");
+    }
+
     /// refresh Box digital input state
     ui->radioButton_DI_0->setChecked(hansRobot->GetRobotBoxDI(0));
     ui->radioButton_DI_1->setChecked(hansRobot->GetRobotBoxDI(1));
@@ -224,6 +242,43 @@ void MainWindow::on_Click_Robot_Connect() {
             ui->label_robot_Connect->setText("Wait connect");
         }
     }
+}
+
+void MainWindow::on_Click_Robot_Enable() {
+    HansRobotState state = hansRobot->GetRobotState();
+    switch (state.MachineState) {
+        case HansMachineState::Disable:
+            hansRobot->pushCommand(rb::HansCommand::GrpPowerOn(0));
+            break;
+        case HansMachineState::StandBy:
+            hansRobot->pushCommand(rb::HansCommand::GrpPowerOff(0));
+            break;
+        case HansMachineState::Blackout_48V:
+            hansRobot->pushCommand(rb::HansCommand::Electrify());
+            break;
+        case HansMachineState::EmergencyStop:
+            hansRobot->pushCommand(rb::HansCommand::GrpReset(0));
+            break;
+    }
+}
+
+void MainWindow::on_Click_Robot_Close() {
+    HansRobotState state = hansRobot->GetRobotState();
+    switch (state.MachineState) {
+    case HansMachineState::Disable:
+            hansRobot->pushCommand(rb::HansCommand::BlackOut());
+            break;
+    case HansMachineState::StandBy:
+            hansRobot->pushCommand(rb::HansCommand::GrpPowerOff(0));
+            hansRobot->pushCommand(rb::HansCommand::BlackOut());
+            break;
+    }
+}
+
+void MainWindow::on_Click_Robot_GripperToggle() {
+    hansRobot->DHGripper_Toggle();
+//    hansRobot->pushCommand(HansCommand::WaitTime(2000));
+//    hansRobot->pushCommand(HansCommand::SetBoxDO(0, true));
 }
 
 //void MainWindow::on_click_robot_control() {

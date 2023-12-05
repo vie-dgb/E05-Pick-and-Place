@@ -3,6 +3,7 @@
 
 namespace rb {
 
+/////// PUBLIC FUNCTIONS
 HansClient::HansClient(QThread::Priority _priority) {
     threadPriority = _priority;
     threadRunning = false;
@@ -57,27 +58,55 @@ void HansClient::pushCommand(CmdContain cmd) {
     mutexQueue.unlock();
 }
 
+void HansClient::SetVirtualDI(int index, bool state) {
+    mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
+    VirtualDI[index] = state;
+    mutexQueue.unlock();
+}
+
+bool HansClient::GetVirtualDI(int index) {
+    bool state = false;
+    mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
+    state = VirtualDI[index];
+    mutexQueue.unlock();
+    return state;
+}
+
 void HansClient::DHGripper_Setup(int input1, int input2, int output1, int output2) {
+    mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
     gripper.Input_1 = input1;
     gripper.Input_2 = input2;
     gripper.Ouput_1 = output1;
     gripper.Ouput_2 = output2;
+    mutexQueue.unlock();
 }
 
 void HansClient::DHGripper_Open() {
-    pushCommand(HansCommand::SetEndDO(0, gripper.Ouput_1, true));
-}
-
-void HansClient::DHGripper_Close() {
     pushCommand(HansCommand::SetEndDO(0, gripper.Ouput_1, false));
     pushCommand(HansCommand::SetEndDO(0, gripper.Ouput_2, false));
 }
 
-bool HansClient::DHGripper_IsOpen() {
-    if(robotData.EndDO[gripper.Ouput_1] || robotData.EndDO[gripper.Ouput_2]) {
-        return true;
+void HansClient::DHGripper_Close() {
+    pushCommand(HansCommand::SetEndDO(0, gripper.Ouput_1, true));
+}
+
+void HansClient::DHGripper_Toggle() {
+    if(DHGripper_GetState() != DH_GripperState::Gripper_Moving) {
+        if(DHGripper_IsOpen()) {
+            DHGripper_Close();
+        }
+        else {
+            DHGripper_Open();
+        }
     }
-    return false;
+}
+
+bool HansClient::DHGripper_IsOpen() {   
+    return gripper.isOpen(robotData.EndDO[gripper.Ouput_1], robotData.EndDO[gripper.Ouput_2]);
+}
+
+DH_GripperState HansClient::DHGripper_GetState() {
+    return gripper.getState(robotData.EndDI[gripper.Input_1], robotData.EndDI[gripper.Input_2]);
 }
 
 /////// PRIVATE FUNCTIONS
@@ -86,14 +115,7 @@ void HansClient::run() {
 
     // close connect when one them connect fail
     if(!isRobotConnected) {
-        if(commandPort->state() != QAbstractSocket::UnconnectedState) {
-            commandPort->disconnectFromHost();
-            commandPort->waitForDisconnected(5000);
-        }
-        if(feedbackPort->state() == QAbstractSocket::UnconnectedState) {
-            feedbackPort->disconnectFromHost();
-            feedbackPort->waitForDisconnected(5000);
-        }
+        closeAllConnect();
         return;
     }
 
@@ -103,14 +125,7 @@ void HansClient::run() {
     }
 
     // disconnect all port
-    commandPort->disconnectFromHost();
-    feedbackPort->disconnectFromHost();
-    if(commandPort->state() != QAbstractSocket::UnconnectedState) {
-        commandPort->waitForDisconnected(5000);
-    }
-    if(feedbackPort->state() != QAbstractSocket::UnconnectedState) {
-        commandPort->waitForDisconnected(5000);
-    }
+    closeAllConnect();
 }
 
 void HansClient::initClient() {
@@ -144,6 +159,15 @@ void HansClient::initClient() {
     }
 
     queueCommandClear();
+}
+
+void HansClient::closeAllConnect() {
+    if(commandPort->state() != QAbstractSocket::UnconnectedState) {
+        commandPort->disconnectFromHost();
+    }
+    if(feedbackPort->state() != QAbstractSocket::UnconnectedState) {
+        feedbackPort->disconnectFromHost();
+    }
 }
 
 bool HansClient::queueCommandIsEmpty() {
@@ -193,11 +217,64 @@ void HansClient::commandHandle() {
     }
 
     lastCommand = queueCommandGetFront();
-    qDebug() << lastCommand.command;
-    QString reply = sendCommand(lastCommand.command);
-    responseHandle(reply);
-    qDebug() << reply;
-    queueCommandPopFront();
+
+    switch (lastCommand.type) {
+    case HansCmdType::Cmd_InApp:
+        inAppCommandHandle();
+        break;
+    case HansCmdType::Cmd_Remote:
+        // QString reply = sendCommand(lastCommand.command);
+        responseHandle(sendCommand(lastCommand.command));
+        queueCommandPopFront();
+        break;
+    }
+}
+
+void HansClient::inAppCommandHandle() {
+    if(lastCommand.command == CMD_WaitTime) {
+        if(timeCounter.StartTimeCounter(lastCommand.bitIndex)) {
+            qDebug() << "Timer timeout: " << lastCommand.bitIndex;
+            queueCommandPopFront();
+        }
+    }
+    else if(lastCommand.command == CMD_WaitVirtualDI) {
+        if(VirtualDI[lastCommand.bitIndex] == lastCommand.bitState) {
+            queueCommandPopFront();
+        }
+    }
+    else if(lastCommand.command == CMD_WaitBoxDO) {
+        if(robotData.BoxDO[lastCommand.bitIndex] == lastCommand.bitState) {
+            qDebug() << "BoxDO trigger";
+            queueCommandPopFront();
+        }
+    }
+    else if(lastCommand.command == CMD_WaitBoxDI) {
+        if(robotData.BoxDI[lastCommand.bitIndex] == lastCommand.bitState) {
+            qDebug() << "BoxDI trigger";
+            queueCommandPopFront();
+        }
+    }
+    else if(lastCommand.command == CMD_WaitEndDO) {
+        if(robotData.EndDO[lastCommand.bitIndex] == lastCommand.bitState) {
+            qDebug() << "EndDO trigger";
+            queueCommandPopFront();
+        }
+    }
+    else if(lastCommand.command == CMD_WaitEndDI) {
+        if(robotData.EndDI[lastCommand.bitIndex] == lastCommand.bitState) {
+            qDebug() << "EndDI trigger";
+            queueCommandPopFront();
+        }
+    }
+    else if(lastCommand.command == CMD_WaitMoveDone) {
+        if(!robotData.robotState.IsMoving) {
+            queueCommandPopFront();
+        }
+    }
+    else if(lastCommand.command == CMD_SetVirtualDO) {
+        VirtualDO[lastCommand.bitIndex] = lastCommand.bitState;
+        emit rb_VirtualDO_ChangeState(lastCommand.bitIndex, VirtualDO[lastCommand.bitIndex]);
+    }
 }
 
 void HansClient::responseHandle(QString raw) {
@@ -269,7 +346,6 @@ void HansClient::response_ReadBoxDO(QStringList &param) {
 }
 
 QByteArray HansClient::sendCommand(QString cmd) {
-//    commandPort->skip(commandPort->bytesAvailable());
     commandPort->write(cmd.toUtf8());
     commandPort->waitForBytesWritten(HANS_COMAMND_WRITE_TIMEOUT);
     commandPort->waitForReadyRead(HANS_COMAMND_RESPONSE_TIMEOUT);

@@ -11,8 +11,19 @@ class HansCommand
 {
 public:
 //    HansCommand();
+    //////// IN-APP COMMAND
+    static CmdContain WaitTime(int timeout);
+    static CmdContain WaitVirtualDI(int index, bool state);
+    static CmdContain WaitBoxDO(int index, bool state);
+    static CmdContain WaitBoxDI(int index, bool state);
+    static CmdContain WaitEndDO(int index, bool state);
+    static CmdContain WaitEndDI(int index, bool state);
+    static CmdContain WaitMoveDone();
+    static CmdContain SetVirtualDO(int index, bool state);
+
+    //////// REMOTE COMMAND
     static CmdContain Electrify();
-    static CmdContain BackOut();
+    static CmdContain BlackOut();
     static CmdContain StartMaster();
     static CmdContain ClostMaster();
     static CmdContain GrpPowerOn(int robotId);

@@ -14,6 +14,8 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
+using namespace rb;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -48,6 +50,9 @@ private:
 
     /// BUTTON ACTIONS
     void on_Click_Robot_Connect();
+    void on_Click_Robot_Enable();
+    void on_Click_Robot_Close();
+    void on_Click_Robot_GripperToggle();
 
 private:
     Ui::MainWindow *ui;
