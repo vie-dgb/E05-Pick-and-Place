@@ -11,6 +11,8 @@ MainWindow::MainWindow(QWidget *parent)
     connectUiEvent();
     ui_Language_Init();
     robot_UiInitialize();
+    camera_UiInitialize();
+    model_UiInitialize();
 }
 
 MainWindow::~MainWindow()
@@ -79,6 +81,15 @@ void MainWindow::connectUiEvent() {
     connect(ui->btn_robot_enable, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_Enable);
     connect(ui->btn_robot_close, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_Close);
     connect(ui->btn_robot_gripperToggle, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_GripperToggle);
+
+    connect(ui->btn_Camera_Connect, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_Connect);
+    connect(ui->btn_Camera_Stream, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_Stream);
+    connect(ui->btn_Camera_SingleShot, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_SingleShot);
+
+    connect(ui->btn_Model_Add, &QPushButton::clicked, this, &MainWindow::on_Click_Model_Add);
+    connect(ui->btn_Model_Delete, &QPushButton::clicked, this, &MainWindow::on_Click_Model_Delete);
+    connect(ui->list_Model_ViewList, &QListWidget::currentRowChanged, this, &MainWindow::on_ViewList_CurrentRowChanged_Model);
+    connect(ui->list_Model_ViewList, &QListWidget::doubleClicked, this, &MainWindow::on_ViewList_DoubleClick_Model);
 }
 
 void MainWindow::ui_Language_Init() {
@@ -223,6 +234,112 @@ void MainWindow::robot_UiUpdate() {
     ui->radioButton_DO_7->setChecked(hansRobot->GetRobotBoxDO(7));
 }
 
+void MainWindow::camera_UiInitialize() {
+    cameraControl = new Vision::PylonGrab;
+
+    connect(cameraControl, &Vision::PylonGrab::signal_cameraConnected, this, [this] () {
+        CDeviceInfo device = cameraControl->getDeviceInfo();
+        ui->btn_Camera_Connect->setText("Disconnect");
+        ui->label_Camera_ConnectStatus->setText("Camera connected");
+        ui->label_Camera_Address->setText("IP Address: " + QString::fromUtf8(device.GetAddress().c_str()));
+        ui->label_Camera_Name->setText("Name: " + QString::fromUtf8(device.GetModelName().c_str()));
+    });
+
+    connect(cameraControl, &Vision::PylonGrab::signal_cameraDisconnected, this, [this] () {
+        ui->btn_Camera_Connect->setText("Connnect");
+        ui->label_Camera_ConnectStatus->setText("No camera connection");
+        ui->label_Camera_Address->setText("IP Address: ??");
+        ui->label_Camera_Name->setText("Name: ??");
+    });
+
+    connect(cameraControl, &Vision::PylonGrab::signal_NewFrameRead,
+            this, &MainWindow::camera_GotNewFrame);
+}
+
+void MainWindow::camera_GotNewFrame(cv::Mat frame) {
+    switch (retrieveMode) {
+    case FrameRetrieveMode::STREAM:
+        camera_UpdateViewFrame(frame);
+        break;
+    case FrameRetrieveMode::SINGLE_SHOT:
+        camera_UpdateViewFrame(frame);
+        break;
+    case FrameRetrieveMode::CALIB_CAMERA:
+//        emit calibCamera_UpdateFrame(frame);
+        break;
+    case FrameRetrieveMode::MATCHING_TEST:
+//        process_MactchingTest(imageCropper->cropRuntimeImage(frame));
+        break;
+    case FrameRetrieveMode::MATCHING_AUTO:
+//        cv::Mat matchingFrame = imageCropper->cropRuntimeImage(frame);
+//        matcher->matchingResult.imageCols = matchingFrame.cols;
+//        matcher->matchingResult.imageRows = matchingFrame.rows;
+//        controller->ImageProcessing(matchingFrame);
+//        //        emit controller->image(matchingFrame);
+        break;
+    }
+}
+
+void MainWindow::camera_UpdateViewFrame(cv::Mat frame) {
+    if(ui->comboBox_Camera_ViewMode->currentText() == "Full size mode") {
+        ui->label_Camera_FrameView->setMaximumHeight(frame.rows);
+        ui->label_Camera_FrameView->setMaximumWidth(frame.cols);
+    }
+    else if(ui->comboBox_Camera_ViewMode->currentText() == "Fit size mode") {
+        ui->label_Camera_FrameView->setMaximumHeight(ui->scrollArea->geometry().height());
+        ui->label_Camera_FrameView->setMaximumWidth(ui->scrollArea->geometry().width());
+    }
+
+    cv::Mat cvRGBFrame;
+    double scaleFactor = (double)ui->label_Camera_FrameView->maximumHeight() / (double)frame.rows;
+    cv::resize(frame, cvRGBFrame, cv::Size(), scaleFactor, scaleFactor);
+    cv::cvtColor(cvRGBFrame, cvRGBFrame, cv::COLOR_BGR2RGB);
+    QImage qDisplayFrame = QImage((uchar*)cvRGBFrame.data, cvRGBFrame.cols, cvRGBFrame.rows, cvRGBFrame.step, QImage::Format_RGB888);
+    ui->label_Camera_FrameView->setPixmap(QPixmap::fromImage(qDisplayFrame));
+}
+
+void MainWindow::model_UiInitialize() {
+    matcher = new ImageMatch::GeoMatch;
+
+}
+
+void MainWindow::model_UpdateViewList() {
+    vector<ImageMatch::GeoModel> modelSrc = matcher->getModelSource();
+
+    ui->list_Model_ViewList->clear();
+
+    for(int listCounter=0;listCounter<modelSrc.size();listCounter++) {
+        ui->list_Model_ViewList->addItem(QString::fromStdString(modelSrc.at(listCounter).nameOfModel));
+    }
+}
+
+void MainWindow::model_UpdateTemplateViewInfo() {
+    vector<ImageMatch::GeoModel> modelSrc = matcher->getModelSource();
+    int currentRow = ui->list_Model_ViewList->currentRow();
+    if(currentRow >= 0) {
+        ui->label_Model_Name->setText("Model: " + QString::fromStdString(modelSrc[currentRow].nameOfModel));
+        ui->label_Model_FileName->setText("File name: " + QString::fromStdString(modelSrc[currentRow].getModelFileName()));
+        ui->label_Model_MinScores->setText("Min scores: " + QString::number(modelSrc[currentRow].minScores));
+    }
+}
+
+void MainWindow::model_PatternEdit(ImageMatch::GeoModel model) {
+    matcher->modifyMatchModelAt(currentModelModifyIndex, model);
+    model_UpdateViewList();
+    ui->list_Model_ViewList->setCurrentRow(currentModelModifyIndex);
+}
+
+void MainWindow::DisplayImageFrame(QLabel *lableContainer, cv::Mat image) {
+    cv::Mat tempFrame = image.clone();
+    cv::Mat cvRGBFrame;
+    double scaleFactor = (double)lableContainer->minimumHeight() / (double)tempFrame.rows;
+    // resize and change color format image to display
+    cv::resize(tempFrame, cvRGBFrame, cv::Size(), scaleFactor, scaleFactor);
+    cv::cvtColor(cvRGBFrame, cvRGBFrame, cv::COLOR_BGR2RGB);
+    QImage qDisplayFrame = QImage((uchar*)cvRGBFrame.data, cvRGBFrame.cols, cvRGBFrame.rows, cvRGBFrame.step, QImage::Format_RGB888);
+    lableContainer->setPixmap(QPixmap::fromImage(qDisplayFrame));
+}
+
 //////////  TIMER ACTIONS
 void MainWindow::on_Timeout_UpdateUiInfo() {
     if(hansRobot->robotIsConnected()) {
@@ -277,64 +394,114 @@ void MainWindow::on_Click_Robot_Close() {
 
 void MainWindow::on_Click_Robot_GripperToggle() {
     hansRobot->DHGripper_Toggle();
-//    hansRobot->pushCommand(HansCommand::WaitTime(2000));
-//    hansRobot->pushCommand(HansCommand::SetBoxDO(0, true));
+//    hansRobot->pushCommand(HansCommand::SetOverride(0, 1));
+//    hansRobot->pushCommand(HansCommand::MoveJ(0, JointPoint(171.206,-22.911,91.417,-180.001,-65.672,119.328)));
+//    hansRobot->pushCommand(HansCommand::WaitStartMove());
+//    hansRobot->pushCommand(HansCommand::WaitMoveDone());
+//    for(int i=0;i<10;i++) {
+//        hansRobot->pushCommand(HansCommand::WayPointL(0, DescartesPoint(0,0,100,180,0,0), "TCP_dh_gripper", "Plane_1", 500, 2500, 50));
+//        hansRobot->pushCommand(HansCommand::WayPointL(0, DescartesPoint(0,200,100,180,0,0), "TCP_dh_gripper", "Plane_1", 500, 2500, 50));
+//        hansRobot->pushCommand(HansCommand::WayPointL(0, DescartesPoint(200,200,100,180,0,0), "TCP_dh_gripper", "Plane_1", 500, 2500, 50));
+//        hansRobot->pushCommand(HansCommand::WayPointL(0, DescartesPoint(200,0,100,180,0,0), "TCP_dh_gripper", "Plane_1", 500, 2500, 50));
+//    }
 }
 
-//void MainWindow::on_click_robot_control() {
-////    int firstSpit = raw.indexOf(',');
-////    QString cmd = raw.mid(0, firstSpit);
-////    raw = raw.right(raw.length() - firstSpit - 1);
-////    qDebug() << "2nd String: " << raw;
-////    QString errorString = raw.mid(0, raw.indexOf(','));
-////    qDebug() << "Command: " << cmd;
-////    qDebug() << "Error report: " << errorString;
+void MainWindow::on_Click_Camera_Connect() {
+    if(!cameraControl->isCameraConnected()) {
+            ChooseCameraDialog *cameraDialog = new ChooseCameraDialog;
+            connect(cameraDialog, &ChooseCameraDialog::signal_userAccepted, this, [this] (Pylon::CDeviceInfo device) {
+                cameraControl->setDeviceInfo(device);
+                cameraControl->cameraConnect();
+            });
+            cameraDialog->showSelectedCameraDialog();
+    }
+    else {
+            cameraControl->cameraDisconnect();
+    }
+}
 
-////    hansRobot->pushCommand(rb::HansCommand::SetOverride(0, 100));
+void MainWindow::on_Click_Camera_Stream() {
+    if(!cameraControl->isCameraStreaming()) {
+            cameraControl->cameraStartStream();
+            ui->btn_Camera_Stream->setText("Stop");
+            ui->btn_Camera_SingleShot->setEnabled(false);
+            retrieveMode = FrameRetrieveMode::STREAM;
+    }
+    else {
+            cameraControl->cameraStopStream();
+            ui->btn_Camera_Stream->setText("Stream");
+            ui->btn_Camera_SingleShot->setEnabled(true);
+    }
+}
 
-////    for(int i=0;i<100;i++) {
-////    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-////                                rb::DescartesPoint(0,0,100,180,0,0),
-////                                rb::JointPoint(0,0,0,0,0,0),
-////                                "TCP_dh_gripper",
-////                                "Plane_1",
-////                                500,
-////                                2500,
-////                                100,
-////                                rb::MoveL,
-////                                false, false, 0, true));
+void MainWindow::on_Click_Camera_SingleShot() {
+    if(!cameraControl->isCameraStreaming()) {
+            retrieveMode = FrameRetrieveMode::SINGLE_SHOT;
+            cameraControl->cameraTriggerSingleShot();
+    }
+}
 
-////    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-////                                 rb::DescartesPoint(0,200,100,180,0,0),
-////                                 rb::JointPoint(0,0,0,0,0,0),
-////                                 "TCP_dh_gripper",
-////                                 "Plane_1",
-////                                 500,
-////                                 2500,
-////                                 100,
-////                                 rb::MoveL,
-////                                 false, false, 0, true));
+void MainWindow::on_Click_Model_Add() {
+    QString filePath = QFileDialog::getOpenFileName(this,
+                                                    "Select template file",
+                                                    choosePathModel,
+                                                    "Images (*.bmp)");
 
-////    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-////                                 rb::DescartesPoint(200,200,100,180,0,0),
-////                                 rb::JointPoint(0,0,0,0,0,0),
-////                                 "TCP_dh_gripper",
-////                                 "Plane_1",
-////                                 500,
-////                                 2500,
-////                                 100,
-////                                 rb::MoveL,
-////                                 false, false, 0, true));
+    if(filePath.isEmpty()) {
+            return;
+    }
+    choosePathModel = filePath.left(filePath.lastIndexOf('/'));
 
-////    hansRobot->pushCommand( rb::HansCommand::WayPoint(0,
-////                                 rb::DescartesPoint(200,0,100,180,0,0),
-////                                 rb::JointPoint(0,0,0,0,0,0),
-////                                 "TCP_dh_gripper",
-////                                 "Plane_1",
-////                                 500,
-////                                 2500,
-////                                 100,
-////                                 rb::MoveL,
-////                                 false, false, 0, true));
-////    }
-//}
+    // get sample name
+    QString sampleName = QInputDialog::getText(0, "Input sample name", "Name:");
+    if(sampleName.isEmpty()) {
+            return;
+    }
+
+    matcher->addGeoMatchModel(filePath.toStdString(), sampleName.toStdString());
+
+    model_UpdateViewList();
+    int lastIndex = ui->list_Model_ViewList->count() - 1;
+    ui->list_Model_ViewList->setCurrentRow(lastIndex);
+    model_UpdateTemplateViewInfo();
+}
+
+void MainWindow::on_Click_Model_Delete() {
+    int deleteIndex = ui->list_Model_ViewList->currentRow();
+    if(deleteIndex < 0) {
+            return;
+    }
+
+    matcher->removeMatchModel(deleteIndex);
+    model_UpdateViewList();
+    int lastIndex = ui->list_Model_ViewList->count() - 1;
+    ui->list_Model_ViewList->setCurrentRow(lastIndex);
+    model_UpdateTemplateViewInfo();
+}
+
+void MainWindow::on_ViewList_CurrentRowChanged_Model(int currentRow) {
+    if(currentRow < 0) {
+            return;
+    }
+    vector<ImageMatch::GeoModel> modelSrc = matcher->getModelSource();
+    DisplayImageFrame(ui->label_Model_PreView, modelSrc.at(currentRow).getImageOfModel());
+    model_UpdateTemplateViewInfo();
+}
+
+void MainWindow::on_ViewList_DoubleClick_Model() {
+    int currentRow = ui->list_Model_ViewList->currentRow();
+    if(currentRow < 0) {
+            return;
+    }
+
+    PatternDialog *editPat = new PatternDialog;
+    connect(editPat, &PatternDialog::patternModelEditFinhished,
+            this, &MainWindow::model_PatternEdit);
+
+    vector<ImageMatch::GeoModel> modelSrc = matcher->getModelSource();
+    ImageMatch::GeoModel model = modelSrc.at(currentRow);
+    currentModelModifyIndex = currentRow;
+
+    editPat->showPatternEdit(model);
+    model_UpdateTemplateViewInfo();
+}

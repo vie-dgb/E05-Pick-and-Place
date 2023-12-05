@@ -19,6 +19,7 @@ public:
     static CmdContain WaitEndDO(int index, bool state);
     static CmdContain WaitEndDI(int index, bool state);
     static CmdContain WaitMoveDone();
+    static CmdContain WaitStartMove();
     static CmdContain SetVirtualDO(int index, bool state);
 
     //////// REMOTE COMMAND
@@ -68,6 +69,11 @@ public:
     static CmdContain StartScript();
     static CmdContain StopScript();
 //    static CmdContain RunFunc();
+
+    static CmdContain WayPointL(int robotId, DescartesPoint PCS, QString TCPName,
+        QString UCSName, double velo, double Accel, double Radius);
+//    static CmdContain WayPointJ_Joint(int robotId, JointPoint ACS,
+//        double velo, double Accel, double Radius);
 };
 
 }

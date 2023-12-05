@@ -32,6 +32,10 @@ CmdContain HansCommand::WaitMoveDone() {
     return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitMoveDone);
 }
 
+CmdContain HansCommand::WaitStartMove() {
+    return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitStartMove);
+}
+
 CmdContain SetVirtualDO(int index, bool state) {
     return CmdContain(HansCmdType::Cmd_InApp, CMD_SetVirtualDO, index, state);
 }
@@ -257,6 +261,18 @@ CmdContain HansCommand::StopScript() {
 
 //CmdContain HansCommand::RunFunc() {}
 
+CmdContain HansCommand::WayPointL(int robotId, DescartesPoint PCS, QString TCPName,
+                            QString UCSName, double velo, double Accel, double Radius) {
+    return WayPoint(robotId, PCS, JointPoint(0,0,0,0,0,0),
+                    TCPName, UCSName, velo, Accel, Radius,
+                    rb::MoveL, false, false, 0, false);
+}
 
+//CmdContain HansCommand::WayPointJ_Joint(int robotId, JointPoint ACS,
+//                                  double velo, double Accel, double Radius) {
+//    return WayPoint(robotId, DescartesPoint(0,0,0,0,0,0), ACS,
+//                    " ", " ", velo, Accel, Radius,
+//                    rb::MoveL, false, false, 0, false);
+//}
 
 }

@@ -9,24 +9,43 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    camera/CalibCamera.cpp \
+    camera/ChooseCameraDialog.cpp \
+    camera/GeoMatch.cpp \
+    camera/GeoModel.cpp \
+    camera/ImageCropper.cpp \
+    camera/PatternDialog.cpp \
+    camera/PylonGrab.cpp \
     dialog/InputFormDialog.cpp \
     dialog/SetColorButton.cpp \
     main.cpp \
     mainwindow.cpp \
     robot/HansClient.cpp \
     robot/HansCommand.cpp \
-    robot/TimeCounter.cpp
+    robot/TimeCounter.cpp \
+    widget/ClickLabel.cpp
 
 HEADERS += \
+    camera/CalibCamera.h \
+    camera/ChooseCameraDialog.h \
+    camera/GeoMatch.h \
+    camera/GeoModel.h \
+    camera/ImageCropper.h \
+    camera/PatternDialog.h \
+    camera/PylonGrab.h \
     dialog/InputFormDialog.h \
     dialog/SetColorButton.h \
     mainwindow.h \
     robot/HansClient.h \
     robot/HansCommand.h \
     robot/HansDefine.h \
-    robot/TimeCounter.h
+    robot/TimeCounter.h \
+    widget/ClickLabel.h
 
 FORMS += \
+    camera/CalibCamera.ui \
+    camera/ChooseCameraDialog.ui \
+    camera/PatternDialog.ui \
     mainwindow.ui
 
 TRANSLATIONS += \
@@ -39,6 +58,20 @@ CONFIG += embed_translations
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+win32:CONFIG(release, debug|release): LIBS += -L'C:/Program Files/Basler/pylon 7/Development/lib/x64/' -lPylonBase_v7_3
+else:win32:CONFIG(debug, debug|release): LIBS += -L'C:/Program Files/Basler/pylon 7/Development/lib/x64/' -lPylonBase_v7_3
+else:unix: LIBS += -L'C:/Program Files/Basler/pylon 7/Development/lib/x64/' -lPylonBase_v7_3
+
+INCLUDEPATH += 'C:/Program Files/Basler/pylon 7/Development/include'
+DEPENDPATH += 'C:/Program Files/Basler/pylon 7/Development/include'
+
+win32:CONFIG(release, debug|release): LIBS += -LC:/opencv/build/x64/vc16/lib/ -lopencv_world480
+else:win32:CONFIG(debug, debug|release): LIBS += -LC:/opencv/build/x64/vc16/lib/ -lopencv_world480d
+else:unix: LIBS += -LC:/opencv/build/x64/vc16/lib/ -lopencv_world480
+
+INCLUDEPATH += C:/opencv/build/include
+DEPENDPATH += C:/opencv/build/include
 
 RESOURCES += \
     AppResource.qrc

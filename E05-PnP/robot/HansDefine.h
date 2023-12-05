@@ -27,6 +27,7 @@
 #define CMD_WaitEndDO               "WaitEndDO"
 #define CMD_WaitEndDI               "WaitEndDI"
 #define CMD_WaitMoveDone            "WaitMoveDone"
+#define CMD_WaitStartMove           "WaitStartMove"
 #define CMD_SetVirtualDO            "SetVirtualDO"
 
 namespace rb {

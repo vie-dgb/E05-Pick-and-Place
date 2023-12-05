@@ -223,8 +223,10 @@ void HansClient::commandHandle() {
         inAppCommandHandle();
         break;
     case HansCmdType::Cmd_Remote:
-        // QString reply = sendCommand(lastCommand.command);
-        responseHandle(sendCommand(lastCommand.command));
+        qDebug() << "Send command: " << lastCommand.command;
+        QString reply = sendCommand(lastCommand.command);
+        qDebug() << "Response command: " << reply;
+        responseHandle(reply);
         queueCommandPopFront();
         break;
     }
@@ -263,6 +265,11 @@ void HansClient::inAppCommandHandle() {
     else if(lastCommand.command == CMD_WaitEndDI) {
         if(robotData.EndDI[lastCommand.bitIndex] == lastCommand.bitState) {
             qDebug() << "EndDI trigger";
+            queueCommandPopFront();
+        }
+    }
+    else if(lastCommand.command == CMD_WaitStartMove) {
+        if(robotData.robotState.IsMoving) {
             queueCommandPopFront();
         }
     }
@@ -422,21 +429,21 @@ void HansClient::feedbackParseData(QByteArray &rawBytes) {
     robotData.ActualPosition.rZ = PosAndVel["Actual_Position"][11].toDouble();
 
     robotData.robotState.MachineState = static_cast<HansMachineState>(StateAndError["robotState"].toInt());
-    robotData.robotState.IsMoving = StateAndError["robotMoving"].toBool();
-    robotData.robotState.IsPowerOn = StateAndError["robotEnabled"].toBool();
+    robotData.robotState.IsMoving = intToBool(StateAndError["robotMoving"].toInt());
+    robotData.robotState.IsPowerOn = intToBool(StateAndError["robotEnabled"].toInt());
     robotData.robotState.ErrorCode = StateAndError["Error_Code"].toInt();
     if(robotData.robotState.ErrorCode != 0) {
         robotData.robotState.IsError = (robotData.robotState.ErrorCode != 0) ? true : false;
     }
     robotData.robotState.ErrorAxisID = StateAndError["Error_AxisID"].toInt();
-    robotData.robotState.IsBraking = StateAndError["robotEnabled"][0].toBool();
+    robotData.robotState.IsBraking = intToBool(StateAndError["robotEnabled"][0].toInt());
 //    robotData.robotState.IsHolding = StateAndError["robotEnabled"].toBool();
     robotData.robotState.IsEmerStopping = (robotData.robotState.MachineState == HansMachineState::EmergencyStop) ? true : false;
-    robotData.robotState.IsSafetyGuardOperate = StateAndError["robotEnabled"].toBool();
+    robotData.robotState.IsSafetyGuardOperate = intToBool(StateAndError["robotEnabled"].toInt());
 //    robotData.robotState.ElectrifyState = StateAndError["robotEnabled"].toBool();
 //    robotData.robotState.IsConnectToBox = StateAndError["robotEnabled"].toBool();
-    robotData.robotState.IsBlendingDone = StateAndError["robotBlendingDone"].toBool();
-    robotData.robotState.IsInPosition = StateAndError["InPos"].toBool();
+    robotData.robotState.IsBlendingDone = intToBool(StateAndError["robotBlendingDone"].toInt());
+    robotData.robotState.IsInPosition = intToBool(StateAndError["InPos"].toInt());
 }
 
 int HansClient::charToUint(char* pBuffer) {
