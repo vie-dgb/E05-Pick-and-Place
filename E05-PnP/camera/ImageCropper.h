@@ -44,8 +44,8 @@ public:
     Point getCropPointPatternImage(int index);
     void setCropPointRuntimeImage(Point setPoint, int index);
     void setCropPointPatternImage(Point setPoint, int index);
-private:
 
+private:
     int mouseCropRuntimeImgIndex = 0;
     int mouseCropPatternImgIndex = 0;
     Point cropPointRuntimeImage[2] = {Point(0,0), Point(800,500)};

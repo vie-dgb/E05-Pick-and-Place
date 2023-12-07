@@ -12,7 +12,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui_Language_Init();
     robot_UiInitialize();
     camera_UiInitialize();
+    calibCamera_UiInitialize();
     model_UiInitialize();
+    plate_UiInitialize();
 }
 
 MainWindow::~MainWindow()
@@ -32,6 +34,13 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         event->ignore();
         return;
     }
+
+    // free memories and delete objects
+    hansRobot->deleteLater();
+    cameraControl->deleteLater();
+    calibCam->deleteLater();
+    flexPlate->deleteLater();
+    delete matcher;
 
     // accept event (accept close application)
     event->accept();
@@ -85,11 +94,19 @@ void MainWindow::connectUiEvent() {
     connect(ui->btn_Camera_Connect, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_Connect);
     connect(ui->btn_Camera_Stream, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_Stream);
     connect(ui->btn_Camera_SingleShot, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_SingleShot);
+    connect(ui->btn_Calib_Camera, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_Calib);
 
     connect(ui->btn_Model_Add, &QPushButton::clicked, this, &MainWindow::on_Click_Model_Add);
     connect(ui->btn_Model_Delete, &QPushButton::clicked, this, &MainWindow::on_Click_Model_Delete);
     connect(ui->list_Model_ViewList, &QListWidget::currentRowChanged, this, &MainWindow::on_ViewList_CurrentRowChanged_Model);
     connect(ui->list_Model_ViewList, &QListWidget::doubleClicked, this, &MainWindow::on_ViewList_DoubleClick_Model);
+    connect(ui->btn_Model_MatchingTest, &QPushButton::clicked, this, &MainWindow::on_Click_Model_MatchingTest);
+
+    connect(ui->btn_Plate_Connect, &QPushButton::clicked, this, &MainWindow::on_Click_Plate_Connect);
+    connect(ui->btn_PlateLightSwitch, &QPushButton::clicked, this, &MainWindow::on_Click_Plate_PlateLightSwitch);
+
+    connect(ui->btn_Setting_Load, &QPushButton::clicked, this, &MainWindow::on_Click_Setting_Load);
+    connect(ui->btn_Setting_Save, &QPushButton::clicked, this, &MainWindow::on_Click_Setting_Save);
 }
 
 void MainWindow::ui_Language_Init() {
@@ -265,10 +282,10 @@ void MainWindow::camera_GotNewFrame(cv::Mat frame) {
         camera_UpdateViewFrame(frame);
         break;
     case FrameRetrieveMode::CALIB_CAMERA:
-//        emit calibCamera_UpdateFrame(frame);
+        emit calibCamera_UpdateFrame(frame);
         break;
     case FrameRetrieveMode::MATCHING_TEST:
-//        process_MactchingTest(imageCropper->cropRuntimeImage(frame));
+        model_MatchingTest(frame);
         break;
     case FrameRetrieveMode::MATCHING_AUTO:
 //        cv::Mat matchingFrame = imageCropper->cropRuntimeImage(frame);
@@ -298,9 +315,21 @@ void MainWindow::camera_UpdateViewFrame(cv::Mat frame) {
     ui->label_Camera_FrameView->setPixmap(QPixmap::fromImage(qDisplayFrame));
 }
 
+void MainWindow::calibCamera_UiInitialize() {
+    imageCropper = new ImageCropper;
+    calibCam = new CalibCamera(this, imageCropper);
+    connect(this, &MainWindow::calibCamera_UpdateFrame, calibCam, &CalibCamera::updateNewFrame);
+    connect(calibCam, &CalibCamera::calibCameraDone, this, &MainWindow::calibCamera_Closed);
+}
+
+void MainWindow::calibCamera_Closed(bool status) {
+    cameraControl->cameraStopStream();
+}
+
 void MainWindow::model_UiInitialize() {
     matcher = new ImageMatch::GeoMatch;
-
+    matcher->pickingBoxSize.height = 100;
+    matcher->pickingBoxSize.width = 40;
 }
 
 void MainWindow::model_UpdateViewList() {
@@ -329,6 +358,14 @@ void MainWindow::model_PatternEdit(ImageMatch::GeoModel model) {
     ui->list_Model_ViewList->setCurrentRow(currentModelModifyIndex);
 }
 
+void MainWindow::model_MatchingTest(cv::Mat image) {
+    Mat newMat = imageCropper->cropRuntimeImage(image);
+    matcher->matching(newMat, false, 50);
+    qDebug() << "Processing time: " << matcher->matchingResult.ExecutionTime;
+    qDebug() << "Low material: " << matcher->matchingResult.isAreaLessThanLimits;
+    camera_UpdateViewFrame(matcher->matchingResult.Image.clone());
+}
+
 void MainWindow::DisplayImageFrame(QLabel *lableContainer, cv::Mat image) {
     cv::Mat tempFrame = image.clone();
     cv::Mat cvRGBFrame;
@@ -338,6 +375,152 @@ void MainWindow::DisplayImageFrame(QLabel *lableContainer, cv::Mat image) {
     cv::cvtColor(cvRGBFrame, cvRGBFrame, cv::COLOR_BGR2RGB);
     QImage qDisplayFrame = QImage((uchar*)cvRGBFrame.data, cvRGBFrame.cols, cvRGBFrame.rows, cvRGBFrame.step, QImage::Format_RGB888);
     lableContainer->setPixmap(QPixmap::fromImage(qDisplayFrame));
+}
+
+void MainWindow::plate_UiInitialize() {
+    flexPlate = new FlexibleFeed;
+    connect(flexPlate, &FlexibleFeed::FeederConnected, this, [this]() {
+        ui->btn_Plate_Connect->setText(lb_plate_Disconnect);
+        ui->label_Plate_Connect->setText(lb_plate_Connected);
+    });
+
+    connect(flexPlate, &FlexibleFeed::FeederDisconnected, this, [this]() {
+        ui->btn_Plate_Connect->setText(lb_plate_Connect);
+        ui->label_Plate_Connect->setText(lb_plate_Disconnected);
+    });
+
+    connect(flexPlate, &FlexibleFeed::FeederConnectInitFail, this, [this](QString msg) {
+        ui->label_Plate_Connect->setText(lb_plate_Disconnected);
+        QMessageBox::information(this,lb_plate_dialog_ConnectInfo, lb_plate_ConnectFail + msg, QMessageBox::Ok);
+    });
+
+    connect(flexPlate, &FlexibleFeed::FeederConnectFail, this, [this]() {
+        ui->label_Plate_Connect->setText(lb_plate_Disconnected);
+        QMessageBox::information(this,lb_plate_dialog_ConnectInfo, lb_plate_ConnectTimeout, QMessageBox::Ok);
+    });
+
+    connect(flexPlate, &FlexibleFeed::FeederConnecting, this, [this]() {
+        ui->label_Plate_Connect->setText(lb_plate_Connecting);
+        ui->label_Plate_IP->setText(lb_plate_dialog_Address + ": " +plateAddress);
+        ui->label_Plate_Port->setText(lb_plate_dialog_ServerPort + ": " + QString::number(plateServerPort));
+    });
+
+    connect(flexPlate, &FlexibleFeed::FeederReadDone, this, [this](FlexibleFeed::FeederData newData) {
+        ui->label_Plate_VersionNumber->setText(tr(lb_plate_VersionNumber.toUtf8()).arg(newData.versionNumber/100.0));
+        if(newData.lightSourceSwitch) {
+            ui->btn_PlateLightSwitch->setText(lb_plate_LightOff);
+        }
+        else {
+            ui->btn_PlateLightSwitch->setText(lb_plate_LightOn);
+        }
+        ui->spinBox_PlateLightLuminance->setValue(newData.lightSourceLuminance);
+        ui->spinBox_PlateOperateDelay->setValue(newData.lightDelayOffTme);
+        if(newData.lightSourceMode == FlexibleFeed::LightSourceMode::Follow) {
+            ui->radioButton_PlateFollowOperate->setChecked(true);
+            ui->radioButton_PlateManualOperate->setChecked(false);
+        }
+        else if(newData.lightSourceMode == FlexibleFeed::LightSourceMode::Manual){
+            ui->radioButton_PlateFollowOperate->setChecked(false);
+            ui->radioButton_PlateManualOperate->setChecked(true);
+        }
+    });
+
+    connect(ui->spinBox_PlateLightLuminance, &QSpinBox::editingFinished, this, [this] () {
+        flexPlate->writeLightLuminance(ui->spinBox_PlateLightLuminance->value());
+    });
+
+    connect(ui->spinBox_PlateOperateDelay, &QSpinBox::editingFinished, this, [this] () {
+        flexPlate->writeLightDelayOffTime(ui->spinBox_PlateOperateDelay->value());
+    });
+
+    connect(ui->radioButton_PlateManualOperate, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeLightControlMode(FlexibleFeed::LightSourceMode::Manual);
+    });
+
+    connect(ui->radioButton_PlateFollowOperate, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeLightControlMode(FlexibleFeed::LightSourceMode::Follow);
+    });
+
+    ////
+    connect(ui->btn_PlateScatt, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::Scatter);
+    });
+
+    connect(ui->btn_PlateLowerLeft, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::BottomLeft);
+    });
+
+    connect(ui->btn_PlateUpper, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::FallingRise);
+    });
+
+    connect(ui->btn_PlateLowerRight, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::LowerRight);
+    });
+
+    connect(ui->btn_PlateUpperRight, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::UpperRight);
+    });
+
+    connect(ui->btn_PlateLower, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::Under);
+    });
+
+    connect(ui->btn_PlateUpperLeft, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::UpperLeft);
+    });
+
+    connect(ui->btn_PlateRight, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::Right);
+    });
+
+    connect(ui->btn_PlateLeft, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::LeftSide);
+    });
+
+    connect(ui->btn_PlateUpAndDown, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::HighAndLow);
+    });
+
+    connect(ui->btn_PlateAround, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::LeftAndRightSide);
+    });
+
+    connect(ui->btn_PlateStop, &QRadioButton::clicked, this, [this] () {
+        flexPlate->writeCommunicateMode(FlexibleFeed::CommunicationMode::Stop);
+    });
+
+
+    ui->label_Plate_IP->setText(lb_plate_dialog_Address + ": *");
+    ui->label_Plate_Port->setText(lb_plate_dialog_ServerPort + ": *");
+
+    plateAddress = "192.168.1.247";
+    plateServerPort = 502;
+}
+
+bool MainWindow::plate_UserInputAddress() {
+    // setup input dialog form
+    InputFormDialog::FormData data;
+    data[lb_plate_dialog_Address] = plateAddress;
+    data[lb_plate_dialog_ServerPort] = plateServerPort;
+    // limits server port number
+    InputFormDialog::FormOptions options;
+    options.numericMin = 0;
+    options.numericMax = 65535;
+
+    while(true) {
+        if(InputFormDialog::getInput("Enter Vibrating address", data, options)) {
+            QHostAddress h_address(data.at<QString>(lb_plate_dialog_Address));
+            if(h_address.protocol() == QAbstractSocket::IPv4Protocol) {
+                plateAddress = data.at<QString>(lb_plate_dialog_Address);
+                plateServerPort = data.at<int>(lb_plate_dialog_ServerPort);
+                return true;
+            }
+        }
+        else {
+            return false;
+        }
+    }
 }
 
 //////////  TIMER ACTIONS
@@ -441,6 +624,16 @@ void MainWindow::on_Click_Camera_SingleShot() {
     }
 }
 
+void MainWindow::on_Click_Camera_Calib() {
+    calibCam->show_CalibDialog();
+    // start stream
+    retrieveMode = FrameRetrieveMode::CALIB_CAMERA;
+    if(!cameraControl->isCameraStreaming()) {
+            cameraControl->cameraStartStream();
+            ui->btn_Camera_Stream->setText("Stop");
+    }
+}
+
 void MainWindow::on_Click_Model_Add() {
     QString filePath = QFileDialog::getOpenFileName(this,
                                                     "Select template file",
@@ -504,4 +697,48 @@ void MainWindow::on_ViewList_DoubleClick_Model() {
 
     editPat->showPatternEdit(model);
     model_UpdateTemplateViewInfo();
+}
+
+void MainWindow::on_Click_Model_MatchingTest() {
+    if(!cameraControl->isCameraConnected()) {
+            return;
+    }
+
+    cameraControl->cameraTriggerSingleShot();
+    retrieveMode = FrameRetrieveMode::MATCHING_TEST;
+}
+
+void MainWindow::on_Click_Plate_Connect() {
+    if(flexPlate->isFeederConnected()) {
+            flexPlate->FeederDisconnect();
+    }
+    else {
+            if(plate_UserInputAddress()) {
+            flexPlate->FeederConnect(plateAddress, plateServerPort);
+            }
+    }
+}
+
+void MainWindow::on_Click_Plate_PlateLightSwitch() {
+    FlexibleFeed::FeederData m_data = flexPlate->getFeederData();
+    flexPlate->writeLightSwitch(!m_data.lightSourceSwitch);
+}
+
+void MainWindow::on_Click_Setting_Load() {
+    QString fullPath = QFileDialog::getOpenFileName(this, "Choose setting file", "/home", "Json (*.json)");
+    SettingHandler setting;
+    setting.load(fullPath);
+
+    imageCropper->setCropPointRuntimeImage(setting.matchingROI.TopLeft, 0);
+    imageCropper->setCropPointRuntimeImage(setting.matchingROI.BottomRight, 1);
+}
+
+void MainWindow::on_Click_Setting_Save() {
+    QString fullPath = QFileDialog::getSaveFileName(this, "Save setting file", "/", "Json (*.json)");
+    SettingHandler setting;
+
+    setting.matchingROI.TopLeft = imageCropper->getCropPointRuntimeImage(0);
+    setting.matchingROI.BottomRight = imageCropper->getCropPointRuntimeImage(1);
+
+    setting.save(fullPath);
 }

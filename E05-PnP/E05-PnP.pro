@@ -18,11 +18,14 @@ SOURCES += \
     camera/PylonGrab.cpp \
     dialog/InputFormDialog.cpp \
     dialog/SetColorButton.cpp \
+    loadFile/SettingFile.cpp \
     main.cpp \
     mainwindow.cpp \
+    plate/FlexibleFeed.cpp \
     robot/HansClient.cpp \
     robot/HansCommand.cpp \
     robot/TimeCounter.cpp \
+    setting/SettingHandler.cpp \
     widget/ClickLabel.cpp
 
 HEADERS += \
@@ -35,11 +38,14 @@ HEADERS += \
     camera/PylonGrab.h \
     dialog/InputFormDialog.h \
     dialog/SetColorButton.h \
+    loadFile/SettingFile.h \
     mainwindow.h \
+    plate/FlexibleFeed.h \
     robot/HansClient.h \
     robot/HansCommand.h \
     robot/HansDefine.h \
     robot/TimeCounter.h \
+    setting/SettingHandler.h \
     widget/ClickLabel.h
 
 FORMS += \

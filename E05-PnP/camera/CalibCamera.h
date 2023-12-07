@@ -45,6 +45,7 @@ private:
     ImageCropper *FrameCropper;
     cv::Mat calibFrame;
     bool userPressDone;
+    int frameReceiveCounter;
 };
 
 #endif // CALIBCAMERA_H

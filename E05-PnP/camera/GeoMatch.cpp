@@ -68,7 +68,7 @@ namespace ImageMatch {
 //        return objectsInPlate;
 //    }
 
-    void GeoMatch::matching(Mat image, bool boudingBoxChecking, int ObjectsNum) {
+    void GeoMatch::matching(Mat &image, bool boudingBoxChecking, int ObjectsNum) {
         image.copyTo(imageSource);
         matching(boudingBoxChecking, ObjectsNum);
     }
@@ -103,6 +103,8 @@ namespace ImageMatch {
         threshold(imageGray, imageThresh, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU);
         findContours(imageThresh, srcContours, srcHierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_NONE);
 
+//        cv::imshow("Thresh contours", imageThresh);
+
         // reset flag indicator object in plate
         bool objectsInPlate = false;
         int sumArea = 0;
@@ -111,7 +113,7 @@ namespace ImageMatch {
         vector<PossibleObject> objects;
         vector<int> possibleCollisionContourIndex;
 //        vector<int> collisionIndex;
-        const int minNoiseArea = (int)(imageSource.cols*imageSource.rows*0.01);
+//        const int minNoiseArea = (int)(imageSource.cols*imageSource.rows*0.01);
         const int maxNoiseArea = (int)(imageSource.cols*imageSource.rows*0.9);
         for(int conCounter=0;conCounter<srcContours.size();conCounter++) {
             PossibleObject tempObject;
@@ -119,9 +121,9 @@ namespace ImageMatch {
 
             // check has any object in plate, use condition to ignore noise
             // when running in release case use suitables condition
-            if(area <= minNoiseArea) {
-                continue;
-            }
+//            if(area <= minNoiseArea) {
+//                continue;
+//            }
 
             // find outside contours for check picking box collision
             possibleCollisionContourIndex.push_back(conCounter);

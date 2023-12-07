@@ -2,7 +2,7 @@
 #define GEOMATCH_H
 
 #include <chrono>
-#include <opencv2/highgui.hpp>
+//#include <opencv2/highgui.hpp>
 
 #include "camera/GeoModel.h"
 
@@ -89,7 +89,7 @@ namespace ImageMatch {
         void setImageSource(string path);
         void setImageSource(Mat img);
 
-        void matching(Mat image, bool boudingBoxChecking, int ObjectsNum);
+        void matching(Mat &image, bool boudingBoxChecking, int ObjectsNum);
         void matching(bool boudingBoxChecking, int ObjectsNum);
 
     private:

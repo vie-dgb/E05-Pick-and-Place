@@ -17,12 +17,15 @@ CalibCamera::~CalibCamera()
 
 void CalibCamera::show_CalibDialog() {
     userPressDone = false;
+    frameReceiveCounter = 0;
     setModal(true);
     showFullScreen();
 }
 
 void CalibCamera::updateNewFrame(cv::Mat frame) {
     frame.copyTo(calibFrame);
+    frameReceiveCounter++;
+    ui->label_FrameCounter->setText("Frame received counter: " + QString::number(frameReceiveCounter));
     displayFrame();
 }
 
@@ -41,37 +44,19 @@ void CalibCamera::label_View_MouseMove(QMouseEvent* event) {
     mouseCoordinates.y = event->y();
 
     FrameCropper->mouseMoveCropRuntimeImg(mouseCoordinates);
-//    if(ui->rBtn_viewCropSetting->isChecked()) {
-//        imgCropper.mouseMoveCropRuntimeImg(mouseCoordinates);
-//        displayFrame();
-//    } else if(ui->rBtn_sampleSetting->isChecked()) {
-//        imgCropper.mouseMoveCropPatternImg(mouseCoordinates);
-//        displayFrame();
-//    }
+    displayFrame();
 }
 
 void CalibCamera::label_View_MousePress(QMouseEvent* event) {
     cv::Point mouseCoordinates;
     mouseCoordinates.x = event->x();
     mouseCoordinates.y = event->y();
-
     FrameCropper->mousePressCropRuntimeImg(mouseCoordinates);
-    //    if(ui->rBtn_viewCropSetting->isChecked()) {
-    //        FrameCropper->mousePressCropRuntimeImg(mouseCoordinates);
-    //        FrameCropper.mousepress
-    //    } else if(ui->rBtn_sampleSetting->isChecked()) {
-    //        FrameCropper->mousePressCropPatternImg(mouseCoordinates);
-    //    }
 }
 
 void CalibCamera::label_View_MouseRelease(QMouseEvent* event) {
     FrameCropper->mouseReleaseCropRuntimeImg();
     displayFrame();
-//    if(ui->rBtn_viewCropSetting->isChecked()) {
-//        imgCropper.mouseReleaseCropRuntimeImg();
-//    } else if(ui->rBtn_sampleSetting->isChecked()) {
-//        imgCropper.mouseReleaseCropPatternImg();
-//    }
 }
 
 void CalibCamera::btn_Clicked_Done() {

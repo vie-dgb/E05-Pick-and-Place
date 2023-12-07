@@ -129,7 +129,7 @@ Point ImageCropper::getCropPointPatternImage(int index) {
     return Point(0, 0);
 }
 
-void ImageCropper::setCropPointRuntimeImage(Point setPoint,int index) {
+void ImageCropper::setCropPointRuntimeImage(Point setPoint, int index) {
     if((index >= 0) && (index < 2)) {
         cropPointRuntimeImage[index] = setPoint;
     }
