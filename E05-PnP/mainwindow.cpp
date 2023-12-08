@@ -274,6 +274,7 @@ void MainWindow::camera_UiInitialize() {
 }
 
 void MainWindow::camera_GotNewFrame(cv::Mat frame) {
+    cv::rotate(frame, frame, cv::ROTATE_180);
     switch (retrieveMode) {
     case FrameRetrieveMode::STREAM:
         camera_UpdateViewFrame(frame);
@@ -361,9 +362,33 @@ void MainWindow::model_PatternEdit(ImageMatch::GeoModel model) {
 void MainWindow::model_MatchingTest(cv::Mat image) {
     Mat newMat = imageCropper->cropRuntimeImage(image);
     matcher->matching(newMat, false, 50);
-    qDebug() << "Processing time: " << matcher->matchingResult.ExecutionTime;
-    qDebug() << "Low material: " << matcher->matchingResult.isAreaLessThanLimits;
+//    qDebug() << "Processing time: " << matcher->matchingResult.ExecutionTime;
+//    qDebug() << "Low material: " << matcher->matchingResult.isAreaLessThanLimits;
+
+//    circle(newMat, Point2f(627.137, 468.314), 2, Scalar(255, 0,0), 2);
+//    camera_UpdateViewFrame(newMat);
+
     camera_UpdateViewFrame(matcher->matchingResult.Image.clone());
+
+    rb::DescartesPoint pointPick;
+    coorCvt.xMaxPickDistance = 321.0;
+    coorCvt.yMaxPickDistance = 196.0;
+
+    if(matcher->matchingResult.Objects.size() == 0) {
+        return;
+    }
+
+    ImageMatch::MatchedObjects matchObj = matcher->matchingResult.Objects.front();
+    Size imageSize;
+    imageSize.width = newMat.cols;
+    imageSize.height = newMat.rows;
+    coorCvt.convertPickCoordinates(pointPick, matchObj.coordinates, 1.0, imageSize);
+
+//    qDebug() << "Image width: " << imageSize.width;
+//    qDebug() << "Image height: " << imageSize.height;
+//    qDebug() << "X position: " << pointPick.X;
+//    qDebug() << "Y position: " << pointPick.Y;
+//    qDebug() << "Angle: " << matchObj.angle*R2D;
 }
 
 void MainWindow::DisplayImageFrame(QLabel *lableContainer, cv::Mat image) {

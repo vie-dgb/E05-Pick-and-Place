@@ -22,6 +22,7 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     plate/FlexibleFeed.cpp \
+    robot/CoordinateCvt.cpp \
     robot/HansClient.cpp \
     robot/HansCommand.cpp \
     robot/TimeCounter.cpp \
@@ -41,6 +42,7 @@ HEADERS += \
     loadFile/SettingFile.h \
     mainwindow.h \
     plate/FlexibleFeed.h \
+    robot/CoordinateCvt.h \
     robot/HansClient.h \
     robot/HansCommand.h \
     robot/HansDefine.h \

@@ -19,6 +19,7 @@
 #include "camera/ImageCropper.h"
 
 #include "robot/HansClient.h"
+#include "robot/CoordinateCvt.h"
 
 #include "plate/FlexibleFeed.h"
 
@@ -141,6 +142,7 @@ private:
     /// HANS ROBOT
     rb::HansClient *hansRobot;
     QString robotAddress;
+    CoordinateCvt coorCvt;
 
     /// BALSER CAMERA
     Vision::PylonGrab *cameraControl;
