@@ -273,22 +273,19 @@ struct CmdContain
 
 struct DescartesPoint
 {
-    double X;
-    double Y;
-    double Z;
-    double rX;
-    double rY;
-    double rZ;
-    DescartesPoint() {
-        X = 0.0;
-        Y = 0.0;
-        Z = 0.0;
-        rX = 0.0;
-        rY = 0.0;
-        rZ = 0.0;
-    }
+    double X = 0.0;
+    double Y = 0.0;
+    double Z = 0.0;
+    double rX = 0.0;
+    double rY = 0.0;
+    double rZ = 0.0;
+    QString plane = "Base";
+    QString tcp = "TCP";
 
-    DescartesPoint(double x, double y, double z, double rx, double ry, double rz) {
+    DescartesPoint() {}
+
+    DescartesPoint(double x, double y, double z,
+                   double rx, double ry, double rz) {
         X = x;
         Y = y;
         Z = z;
@@ -296,32 +293,43 @@ struct DescartesPoint
         rY = ry;
         rZ = rz;
     }
+
+    DescartesPoint(double x, double y, double z,
+                   double rx, double ry, double rz,
+                   QString plane_name, QString tcp_name) {
+        X = x;
+        Y = y;
+        Z = z;
+        rX = rx;
+        rY = ry;
+        rZ = rz;
+        plane = plane_name;
+        tcp = tcp_name;
+    }
 };
 
 struct JointPoint
 {
-    double J1;
-    double J2;
-    double J3;
-    double J4;
-    double J5;
-    double J6;
-    JointPoint() {
-        J1 = 0.0;
-        J2 = 0.0;
-        J3 = 0.0;
-        J4 = 0.0;
-        J5 = 0.0;
-        J6 = 0.0;
-    }
+    double J1 = 0.0;
+    double J2 = 0.0;
+    double J3 = 0.0;
+    double J4 = 0.0;
+    double J5 = 0.0;
+    double J6 = 0.0;
+    QString tcp = "TCP";
 
-    JointPoint(double j1, double j2, double j3, double j4, double j5, double j6) {
+    JointPoint() {}
+
+    JointPoint(double j1, double j2, double j3,
+               double j4, double j5, double j6,
+               QString tcp_name) {
         J1 = j1;
         J2 = j2;
         J3 = j3;
         J4 = j4;
         J5 = j5;
         J6 = j6;
+        tcp = tcp_name;
     }
 };
 

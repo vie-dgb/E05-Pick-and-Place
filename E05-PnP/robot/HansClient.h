@@ -36,6 +36,7 @@ public:
     bool GetRobotBoxDO(int index);
     bool GetRobotBoxDI(int index);
     void pushCommand(CmdContain cmd);
+    void RobotStopImmediate();
 
     /// In-App control functions
     void SetVirtualDI(int index, bool state);
@@ -60,6 +61,7 @@ private:
     void pushRobotQueryInfo();
     void commandHandle();
     void inAppCommandHandle();
+    void ImmediateStopHandle();
 
     void responseHandle(QString raw);
     bool responseCommandCheck(QStringList &param);
@@ -92,9 +94,17 @@ signals:
     void rb_CommandResponseFail(QString cmd);
     void rb_CommandResponseWrongCommand(QString response);
     void rb_CommandResponseWrongFormat(QString response);
-    void rb_VirtualDO_ChangeState(int index, bool state);
 
-private:
+    void RbSignal_VirtualDIStrigger(int index, bool state);
+    void RbSignal_VirtualDOChange(int index, bool state);
+    void RbSignal_BoxDOStrigger(int index, bool state);
+    void RbSignal_BoxDIStrigger(int index, bool state);
+    void RbSignal_EndDOStrigger(int index, bool state);
+    void RbSignal_EndDIStrigger(int index, bool state);
+    void RbSignal_StartMove();
+    void RbSignal_MoveDone();
+
+  private:
     QThread::Priority threadPriority;
     bool threadRunning;
 
@@ -123,6 +133,9 @@ private:
 
     /// Timer counter
     TimeCounter timeCounter;
+
+    /// Emmergency stop flag
+    bool is_immediate_stop_;
 };
 
 }

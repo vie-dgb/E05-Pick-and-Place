@@ -16,6 +16,7 @@ SOURCES += \
     camera/ImageCropper.cpp \
     camera/PatternDialog.cpp \
     camera/PylonGrab.cpp \
+    controller/PnpController.cpp \
     dialog/InputFormDialog.cpp \
     dialog/SetColorButton.cpp \
     loadFile/SettingFile.cpp \
@@ -37,6 +38,7 @@ HEADERS += \
     camera/ImageCropper.h \
     camera/PatternDialog.h \
     camera/PylonGrab.h \
+    controller/PnpController.h \
     dialog/InputFormDialog.h \
     dialog/SetColorButton.h \
     loadFile/SettingFile.h \
