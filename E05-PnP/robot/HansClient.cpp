@@ -68,6 +68,12 @@ void HansClient::pushCommand(CmdContain cmd)
   mutexQueue.unlock();
 }
 
+void HansClient::pushCommandInFront(CmdContain cmd) {
+  mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
+  commandQueue.push_front(cmd);
+  mutexQueue.unlock();
+}
+
 void HansClient::RobotStopImmediate() {
   mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
   is_immediate_stop_ = true;
@@ -256,12 +262,13 @@ void HansClient::commandHandle()
 
   switch (lastCommand.type) {
     case HansCmdType::Cmd_InApp:
+      qDebug() << "In-app command: " << lastCommand.command;
       inAppCommandHandle();
       break;
     case HansCmdType::Cmd_Remote:
-//      qDebug() << "Send command: " << lastCommand.command;
+      qDebug() << "Send command: " << lastCommand.command;
       QString reply = sendCommand(lastCommand.command);
-//      qDebug() << "Response command: " << reply;
+      qDebug() << "Response command: " << reply;
       responseHandle(reply);
       queueCommandPopFront();
       break;
@@ -284,9 +291,12 @@ void HansClient::inAppCommandHandle()
     }
   } else if (lastCommand.command == CMD_SetVirtualDO) {
     /// Set state for VIRTUAL output bit
-    VirtualDO[lastCommand.bitIndex] = lastCommand.bitState;
-    emit RbSignal_VirtualDOChange(lastCommand.bitIndex,
-                                  VirtualDO[lastCommand.bitIndex]);
+    if (!robotData.robotState.IsMoving) {
+      VirtualDO[lastCommand.bitIndex] = lastCommand.bitState;
+      emit RbSignal_VirtualDOChange(lastCommand.bitIndex,
+                                    VirtualDO[lastCommand.bitIndex]);
+      queueCommandPopFront();
+    }
   }
   else if (lastCommand.command == CMD_WaitBoxDO) {
     /// Wait until BOX output bit chosen active set state

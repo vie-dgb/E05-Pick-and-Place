@@ -36,6 +36,7 @@ public:
     bool GetRobotBoxDO(int index);
     bool GetRobotBoxDI(int index);
     void pushCommand(CmdContain cmd);
+    void pushCommandInFront(CmdContain cmd);
     void RobotStopImmediate();
 
     /// In-App control functions

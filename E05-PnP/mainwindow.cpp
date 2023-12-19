@@ -52,6 +52,10 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     flexPlate->FeederDisconnect();
   }
 
+  if(dhController->DH_IsConnected()) {
+    dhController->DH_Disconnect();
+  }
+
   // free memories and delete objects
   hansRobot->deleteLater();
   cameraControl->deleteLater();
@@ -71,7 +75,7 @@ void MainWindow::initUiEvent() {
 }
 
 void MainWindow::PnpUiInitialize() {
-  pnp_controller_ = new PnpController(hansRobot, matcher, coorCvt, flexPlate);
+  pnp_controller_ = new PnpController(hansRobot, matcher, coorCvt, flexPlate, dhController);
   pnp_controller_->PnpControllerInit();
 
   connect(pnp_controller_, &PnpController::PnpSignal_StateChanged, this,

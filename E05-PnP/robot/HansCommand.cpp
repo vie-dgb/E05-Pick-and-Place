@@ -36,7 +36,7 @@ CmdContain HansCommand::WaitStartMove() {
   return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitStartMove);
 }
 
-CmdContain SetVirtualDO(int index, bool state) {
+CmdContain HansCommand::SetVirtualDO(int index, bool state) {
   return CmdContain(HansCmdType::Cmd_InApp, CMD_SetVirtualDO, index, state);
 }
 
