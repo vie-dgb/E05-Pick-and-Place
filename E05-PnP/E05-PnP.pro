@@ -17,8 +17,13 @@ SOURCES += \
     camera/PatternDialog.cpp \
     camera/PylonGrab.cpp \
     controller/PnpController.cpp \
+    dh-robotic/dh_rgi.cpp \
+    dh-robotic/dhcontroller.cpp \
+    dh-robotic/dhrgiwidget.cpp \
+    dh-robotic/serialsettingdialog.cpp \
     dialog/InputFormDialog.cpp \
     dialog/SetColorButton.cpp \
+    expandio/ModbusExpandIO.cpp \
     loadFile/SettingFile.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -26,8 +31,8 @@ SOURCES += \
     robot/CoordinateCvt.cpp \
     robot/HansClient.cpp \
     robot/HansCommand.cpp \
-    robot/TimeCounter.cpp \
     setting/SettingHandler.cpp \
+    time/TimeCounter.cpp \
     widget/ClickLabel.cpp
 
 HEADERS += \
@@ -39,8 +44,14 @@ HEADERS += \
     camera/PatternDialog.h \
     camera/PylonGrab.h \
     controller/PnpController.h \
+    dh-robotic/dh_rgi.h \
+    dh-robotic/dhcontroller.h \
+    dh-robotic/dhr_define.h \
+    dh-robotic/dhrgiwidget.h \
+    dh-robotic/serialsettingdialog.h \
     dialog/InputFormDialog.h \
     dialog/SetColorButton.h \
+    expandio/ModbusExpandIO.h \
     loadFile/SettingFile.h \
     mainwindow.h \
     plate/FlexibleFeed.h \
@@ -48,14 +59,16 @@ HEADERS += \
     robot/HansClient.h \
     robot/HansCommand.h \
     robot/HansDefine.h \
-    robot/TimeCounter.h \
     setting/SettingHandler.h \
+    time/TimeCounter.h \
     widget/ClickLabel.h
 
 FORMS += \
     camera/CalibCamera.ui \
     camera/ChooseCameraDialog.ui \
     camera/PatternDialog.ui \
+    dh-robotic/dhrgiwidget.ui \
+    dh-robotic/serialsettingdialog.ui \
     mainwindow.ui
 
 TRANSLATIONS += \

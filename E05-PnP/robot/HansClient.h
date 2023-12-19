@@ -15,7 +15,7 @@
 
 #include "HansDefine.h"
 #include "HansCommand.h"
-#include "TimeCounter.h"
+#include "time/TimeCounter.h"
 
 using namespace std::chrono;
 
@@ -48,7 +48,7 @@ public:
     void DHGripper_Close();
     void DHGripper_Toggle();
     bool DHGripper_IsOpen();
-    DH_GripperState DHGripper_GetState();
+    DhGripperState DHGripper_GetState();
 
 private:
     void run() override;
@@ -62,6 +62,7 @@ private:
     void commandHandle();
     void inAppCommandHandle();
     void ImmediateStopHandle();
+    void DhGripperStateHandle();
 
     void responseHandle(QString raw);
     bool responseCommandCheck(QStringList &param);
@@ -103,6 +104,10 @@ signals:
     void RbSignal_EndDIStrigger(int index, bool state);
     void RbSignal_StartMove();
     void RbSignal_MoveDone();
+    void DhSignal_InStateMoving();
+    void DhSignal_InStateHolding();
+    void DhSignal_InStateArrived();
+    void DhSignal_InStateFail();
 
   private:
     QThread::Priority threadPriority;
@@ -129,7 +134,8 @@ signals:
     bool VirtualDO[8] = { false, false, false, false, false, false, false, false};
 
     /// DH-GRIPPER
-    DH_Gripper gripper;
+    DhGripper gripper;
+    DhGripperState gripper_previous_state_;
 
     /// Timer counter
     TimeCounter timeCounter;

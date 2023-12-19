@@ -74,17 +74,22 @@ void PnpController::SetPnpState(PnpState state) {
 
 void PnpController::MoveToStandby() {
   SetPnpState(PnpState::kPnpWaitMoveToStandby);
-  robot_->pushCommand(HansCommand::SetOverride(0, 20));
+  robot_->pushCommand(HansCommand::SetOverride(0, 100));
   position_standby_.Y += 1;
-  robot_->pushCommand(HansCommand::WayPointL(0, position_standby_, veloc_low_,
+  robot_->pushCommand(HansCommand::WayPointL(0,
+                                             position_standby_,
+                                             veloc_low_,
                                              accel_low_, 0));
   position_standby_.Y -= 1;
-  robot_->pushCommand(HansCommand::WayPointL(0, position_standby_, veloc_low_,
+  robot_->pushCommand(HansCommand::WayPointL(0,
+                                             position_standby_,
+                                             veloc_low_,
                                              accel_low_, 0));
   robot_->pushCommand(HansCommand::WaitStartMove());
   robot_->pushCommand(HansCommand::WaitMoveDone());
   robot_->DHGripper_Open();
-  robot_->pushCommand(HansCommand::WaitTime(1000));
+  robot_->pushCommand(HansCommand::WaitTime(2000));
+//  robot_->pushCommand(HansCommand::WaitDhGripperArrived());
 }
 
 void PnpController::TriggerGrabFrame() {
@@ -94,7 +99,7 @@ void PnpController::TriggerGrabFrame() {
 }
 
 void PnpController::ReceivedNewFrame(cv::Mat frame) {
-  SetPnpState(PnpState::kPnpWaitGrabbingFrame);
+  SetPnpState(PnpState::kPnpImageProcessing);
   emit PnpSignal_HasNewMessage("[PNP Controller]: Received frame, finding match objects.");
   matcher_->matching(frame, true, 2);
   frame_size_.width = frame.cols;
@@ -147,7 +152,7 @@ void PnpController::MovePickAndPlace() {
   place_point.tcp = "TCP_dh_gripper";
 
   // push command to queue
-  robot_->pushCommand(HansCommand::SetOverride(0, 80));
+  robot_->pushCommand(HansCommand::SetOverride(0, 100));
   robot_->pushCommand(HansCommand::WayPointLRelRef(0, pick_point,
                                                    0, 0, 120, 0,
                                                    veloc_fast_, accel_fast_, 10));
@@ -156,7 +161,8 @@ void PnpController::MovePickAndPlace() {
   robot_->pushCommand(HansCommand::WaitStartMove());
   robot_->pushCommand(HansCommand::WaitMoveDone());
   robot_->DHGripper_Close();
-  robot_->pushCommand(HansCommand::WaitTime(1000));
+  robot_->pushCommand(HansCommand::WaitTime(100));
+//  robot_->pushCommand(HansCommand::WaitDhGripperHolding());
   robot_->pushCommand(HansCommand::WayPointLRelRef(0, pick_point,
                                                    0, 0, 120, 0,
                                                    veloc_fast_, accel_fast_, 10));
@@ -169,7 +175,8 @@ void PnpController::MovePickAndPlace() {
   robot_->pushCommand(HansCommand::WaitStartMove());
   robot_->pushCommand(HansCommand::WaitMoveDone());
   robot_->DHGripper_Open();
-  robot_->pushCommand(HansCommand::WaitTime(1000));
+  robot_->pushCommand(HansCommand::WaitTime(100));
+//  robot_->pushCommand(HansCommand::WaitDhGripperArrived());
   robot_->pushCommand(HansCommand::WayPointLRelRef(0, place_point,
                                                    0, 0, 250, 0,
                                                    veloc_fast_, accel_fast_, 10));

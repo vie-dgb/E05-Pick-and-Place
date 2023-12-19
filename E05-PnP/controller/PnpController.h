@@ -71,10 +71,10 @@ private:
   bool is_less_than_limit_;
   Size frame_size_;
 
-  const double veloc_fast_ = 300.0;
-  const double veloc_low_ = 100.0;
+  const double veloc_fast_ = 500.0;
+  const double veloc_low_ = 300.0;
   const double accel_fast_ = 2500.0;
-  const double accel_low_ = 500.0;
+  const double accel_low_ = 1000.0;
 };
 
 #endif // PNPCONTROLLER_H

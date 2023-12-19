@@ -40,6 +40,14 @@ CmdContain SetVirtualDO(int index, bool state) {
   return CmdContain(HansCmdType::Cmd_InApp, CMD_SetVirtualDO, index, state);
 }
 
+CmdContain HansCommand::WaitDhGripperHolding() {
+  return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitDhGripperHolding);
+}
+
+CmdContain HansCommand::WaitDhGripperArrived() {
+  return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitDhGripperArrived);
+}
+
 //////// REMOTE COMMAND
 
 CmdContain HansCommand::Electrify() {

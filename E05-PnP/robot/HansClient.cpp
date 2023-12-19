@@ -93,27 +93,27 @@ bool HansClient::GetVirtualDI(int index)
 void HansClient::DHGripper_Setup(int input1, int input2, int output1, int output2)
 {
   mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
-  gripper.Input_1 = input1;
-  gripper.Input_2 = input2;
-  gripper.Ouput_1 = output1;
-  gripper.Ouput_2 = output2;
+  gripper.input_1 = input1;
+  gripper.input_2 = input2;
+  gripper.ouput_1 = output1;
+  gripper.ouput_2 = output2;
   mutexQueue.unlock();
 }
 
 void HansClient::DHGripper_Open()
 {
-  pushCommand(HansCommand::SetEndDO(0, gripper.Ouput_1, false));
-  pushCommand(HansCommand::SetEndDO(0, gripper.Ouput_2, false));
+  pushCommand(HansCommand::SetEndDO(0, gripper.ouput_1, false));
+  pushCommand(HansCommand::SetEndDO(0, gripper.ouput_2, false));
 }
 
 void HansClient::DHGripper_Close()
 {
-  pushCommand(HansCommand::SetEndDO(0, gripper.Ouput_1, true));
+  pushCommand(HansCommand::SetEndDO(0, gripper.ouput_1, true));
 }
 
 void HansClient::DHGripper_Toggle()
 {
-  if (DHGripper_GetState() != DH_GripperState::Gripper_Moving) {
+  if (DHGripper_GetState() != DhGripperState::kGripperMoving) {
     if (DHGripper_IsOpen()) {
       DHGripper_Close();
     } else {
@@ -124,12 +124,12 @@ void HansClient::DHGripper_Toggle()
 
 bool HansClient::DHGripper_IsOpen()
 {
-  return gripper.isOpen(robotData.EndDO[gripper.Ouput_1], robotData.EndDO[gripper.Ouput_2]);
+  return gripper.IsOpen(robotData.EndDO[gripper.ouput_1], robotData.EndDO[gripper.ouput_2]);
 }
 
-DH_GripperState HansClient::DHGripper_GetState()
+DhGripperState HansClient::DHGripper_GetState()
 {
-  return gripper.getState(robotData.EndDI[gripper.Input_1], robotData.EndDI[gripper.Input_2]);
+  return gripper.GetState(robotData.EndDI[gripper.input_1], robotData.EndDI[gripper.input_2]);
 }
 
 /////// PRIVATE FUNCTIONS
@@ -148,6 +148,7 @@ void HansClient::run()
     ImmediateStopHandle();
 
     feedbackFromHostHandle();
+    DhGripperStateHandle();
     commandHandle();
   }
 
@@ -258,9 +259,9 @@ void HansClient::commandHandle()
       inAppCommandHandle();
       break;
     case HansCmdType::Cmd_Remote:
-      qDebug() << "Send command: " << lastCommand.command;
+//      qDebug() << "Send command: " << lastCommand.command;
       QString reply = sendCommand(lastCommand.command);
-      qDebug() << "Response command: " << reply;
+//      qDebug() << "Response command: " << reply;
       responseHandle(reply);
       queueCommandPopFront();
       break;
@@ -272,7 +273,6 @@ void HansClient::inAppCommandHandle()
   if (lastCommand.command == CMD_WaitTime) {
     /// Wait until time-out
     if (timeCounter.StartTimeCounter(lastCommand.bitIndex)) {
-//      qDebug() << "Timer timeout: " << lastCommand.bitIndex;
       queueCommandPopFront();
     }
   } else if (lastCommand.command == CMD_WaitVirtualDI) {
@@ -291,28 +291,24 @@ void HansClient::inAppCommandHandle()
   else if (lastCommand.command == CMD_WaitBoxDO) {
     /// Wait until BOX output bit chosen active set state
     if (robotData.BoxDO[lastCommand.bitIndex] == lastCommand.bitState) {
-      //      qDebug() << "BoxDO trigger";
       emit RbSignal_BoxDOStrigger(lastCommand.bitIndex, lastCommand.bitState);
       queueCommandPopFront();
     }
   } else if (lastCommand.command == CMD_WaitBoxDI) {
     /// Wait until BOX input bit chosen active set state
     if (robotData.BoxDI[lastCommand.bitIndex] == lastCommand.bitState) {
-      //      qDebug() << "BoxDI trigger";
       emit RbSignal_BoxDIStrigger(lastCommand.bitIndex, lastCommand.bitState);
       queueCommandPopFront();
     }
   } else if (lastCommand.command == CMD_WaitEndDO) {
     /// Wait until END output bit chosen active set state
     if (robotData.EndDO[lastCommand.bitIndex] == lastCommand.bitState) {
-      //      qDebug() << "EndDO trigger";
       emit RbSignal_EndDOStrigger(lastCommand.bitIndex, lastCommand.bitState);
       queueCommandPopFront();
     }
   } else if (lastCommand.command == CMD_WaitEndDI) {
     /// Wait until END input bit chosen active set state
     if (robotData.EndDI[lastCommand.bitIndex] == lastCommand.bitState) {
-      //      qDebug() << "EndDI trigger";
       emit RbSignal_EndDIStrigger(lastCommand.bitIndex, lastCommand.bitState);
       queueCommandPopFront();
     }
@@ -328,6 +324,16 @@ void HansClient::inAppCommandHandle()
       emit RbSignal_MoveDone();
       queueCommandPopFront();
     }
+  } else if (lastCommand.command == CMD_WaitDhGripperHolding) {
+    /// Wait hd gripper in state holding
+    if (gripper.last_state == DhGripperState::kGripperHolding) {
+      queueCommandPopFront();
+    }
+  } else if (lastCommand.command == CMD_WaitDhGripperArrived) {
+    /// Wait hd gripper in state holding
+    if (gripper.last_state == DhGripperState::kGripperArrived) {
+      queueCommandPopFront();
+    }
   }
 }
 
@@ -335,14 +341,41 @@ void HansClient::ImmediateStopHandle() {
   // lock all memories inside thread until robot stop
   mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
   if(is_immediate_stop_) {
-    CmdContain stop_command = HansCommand::GrpStop(0);
-    qDebug() << "Send command: " << stop_command.command;
-    QString reply = sendCommand(stop_command.command);
-    qDebug() << "Response command: " << reply;
+//    CmdContain stop_command = HansCommand::GrpStop(0);
+//    qDebug() << "Send command: " << stop_command.command;
+//    QString reply = sendCommand(stop_command.command);
+//    qDebug() << "Response command: " << reply;
+//    queueCommandClear();
     queueCommandClear();
+    pushCommand(HansCommand::GrpStop(0));
+    if(robotData.robotState.IsPowerOn) {
+      pushCommand(HansCommand::GrpPowerOff(0));
+    }
+    pushCommand(HansCommand::BlackOut());
     is_immediate_stop_ = false;
   }
   mutexQueue.unlock();
+}
+
+void HansClient::DhGripperStateHandle() {
+  DHGripper_GetState();
+  if(gripper_previous_state_ != gripper.last_state) {
+    gripper_previous_state_ = gripper.last_state;
+    switch (gripper_previous_state_) {
+      case DhGripperState::kGripperArrived:
+        emit DhSignal_InStateArrived();
+        break;
+      case DhGripperState::kGripperMoving:
+        emit DhSignal_InStateMoving();
+        break;
+      case DhGripperState::kGripperHolding:
+        emit DhSignal_InStateHolding();
+        break;
+      case DhGripperState::kGripperFail:
+        emit DhSignal_InStateFail();
+        break;
+    }
+  }
 }
 
 void HansClient::responseHandle(QString raw)

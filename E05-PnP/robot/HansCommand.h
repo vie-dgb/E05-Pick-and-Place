@@ -21,6 +21,8 @@ public:
     static CmdContain WaitMoveDone();
     static CmdContain WaitStartMove();
     static CmdContain SetVirtualDO(int index, bool state);
+    static CmdContain WaitDhGripperHolding();
+    static CmdContain WaitDhGripperArrived();
 
     //////// REMOTE COMMAND
     static CmdContain Electrify();

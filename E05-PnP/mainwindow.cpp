@@ -15,6 +15,8 @@ MainWindow::MainWindow(QWidget *parent)
   calibCamera_UiInitialize();
   model_UiInitialize();
   plate_UiInitialize();
+  dhr_UiInitialize();
+  ExioUiInitialize();
   PnpUiInitialize();
   // show main dashboard first
   ui->tabWidget_Main->setCurrentIndex(0);
@@ -55,6 +57,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
   cameraControl->deleteLater();
   calibCam->deleteLater();
   flexPlate->deleteLater();
+  modbus_exio->deleteLater();
   delete matcher;
 
   // accept event (accept close application)
@@ -92,17 +95,36 @@ void MainWindow::PnpUiInitialize() {
 
   connect(pnp_controller_, &PnpController::PnpSignal_DisplayMatchingImage,
           this, [this] (cv::Mat frame) {
-    double img_scale = ui->label_dashboard_frame_view->height() / (double)frame.rows;
+    double img_scale = 1.0;
+    if(ui->label_dashboard_frame_view->height() < frame.rows) {
+      img_scale = ((double)ui->label_dashboard_frame_view->height()) / ((double)frame.rows);
+    }
     DisplayImageFrame(ui->label_dashboard_frame_view, frame, img_scale);
+
+    if (matcher->matchingResult.isFoundMatchObject) {
+      MatchedObjects object = matcher->matchingResult.Objects.front();
+      ui->label_dashboard_object_name->setText("Matched name: " + QString::fromStdString(object.name));
+
+      double angle = -object.angle*C_R2D;
+      if (angle >= 180.0) {
+        angle -= 360.0;
+      } else if (angle <= -180.0) {
+        angle += 360.0;
+      }
+      ui->label_dashboard_object_angle->setText("Matched angle: " + QString::number(angle));
+      ui->label_dashboard_object_score->setText("Matched scores: " + QString::number(object.scores));
+    }
   });
 }
 
 void MainWindow::connectUiEvent() {
   /// TIMER EVENTS
-  connect(updateInfoTimer, &QTimer::timeout, this, &MainWindow::on_Timeout_UpdateUiInfo);
+  connect(updateInfoTimer, &QTimer::timeout,
+          this, &MainWindow::on_Timeout_UpdateUiInfo);
 
   /// COMBOBOX EVENTS
-  connect(ui->comboBox_Language, &QComboBox::currentIndexChanged, this, &MainWindow::ui_Language_Load);
+  connect(ui->comboBox_Language, &QComboBox::currentIndexChanged,
+          this, &MainWindow::ui_Language_Load);
 
   /// RADIO BUTTON
   connect(ui->radioButton_DO_0, &QRadioButton::clicked, this, [this] (bool state) {
@@ -131,30 +153,55 @@ void MainWindow::connectUiEvent() {
   });
 
   /// BUTTON EVENTS
-  connect(ui->btn_dashboard_start, &QPushButton::clicked, this, &MainWindow::on_Click_Dashboard_Start);
-  connect(ui->btn_dashboard_stop, &QPushButton::clicked, this, &MainWindow::on_Click_Dashboard_Stop);
+  connect(ui->btn_dashboard_start, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Dashboard_Start);
+  connect(ui->btn_dashboard_stop, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Dashboard_Stop);
 
-  connect(ui->btn_robot_Connect, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_Connect);
-  connect(ui->btn_robot_enable, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_Enable);
-  connect(ui->btn_robot_close, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_Close);
-  connect(ui->btn_robot_gripperToggle, &QPushButton::clicked, this, &MainWindow::on_Click_Robot_GripperToggle);
+  connect(ui->btn_robot_Connect, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Robot_Connect);
+  connect(ui->btn_robot_enable, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Robot_Enable);
+  connect(ui->btn_robot_close, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Robot_Close);
+  connect(ui->btn_robot_gripperToggle, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Robot_GripperToggle);
 
-  connect(ui->btn_Camera_Connect, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_Connect);
-  connect(ui->btn_Camera_Stream, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_Stream);
-  connect(ui->btn_Camera_SingleShot, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_SingleShot);
-  connect(ui->btn_Calib_Camera, &QPushButton::clicked, this, &MainWindow::on_Click_Camera_Calib);
+  connect(ui->btn_Camera_Connect, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Camera_Connect);
+  connect(ui->btn_Camera_Stream, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Camera_Stream);
+  connect(ui->btn_Camera_SingleShot, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Camera_SingleShot);
+  connect(ui->btn_Calib_Camera, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Camera_Calib);
 
-  connect(ui->btn_Model_Add, &QPushButton::clicked, this, &MainWindow::on_Click_Model_Add);
-  connect(ui->btn_Model_Delete, &QPushButton::clicked, this, &MainWindow::on_Click_Model_Delete);
-  connect(ui->list_Model_ViewList, &QListWidget::currentRowChanged, this, &MainWindow::on_ViewList_CurrentRowChanged_Model);
-  connect(ui->list_Model_ViewList, &QListWidget::doubleClicked, this, &MainWindow::on_ViewList_DoubleClick_Model);
-  connect(ui->btn_Model_MatchingTest, &QPushButton::clicked, this, &MainWindow::on_Click_Model_MatchingTest);
+  connect(ui->btn_Model_Add, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Model_Add);
+  connect(ui->btn_Model_Delete, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Model_Delete);
+  connect(ui->list_Model_ViewList, &QListWidget::currentRowChanged,
+          this, &MainWindow::on_ViewList_CurrentRowChanged_Model);
+  connect(ui->list_Model_ViewList, &QListWidget::doubleClicked,
+          this, &MainWindow::on_ViewList_DoubleClick_Model);
+  connect(ui->btn_Model_MatchingTest, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Model_MatchingTest);
 
-  connect(ui->btn_Plate_Connect, &QPushButton::clicked, this, &MainWindow::on_Click_Plate_Connect);
-  connect(ui->btn_PlateLightSwitch, &QPushButton::clicked, this, &MainWindow::on_Click_Plate_PlateLightSwitch);
+  connect(ui->btn_Plate_Connect, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Plate_Connect);
+  connect(ui->btn_PlateLightSwitch, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Plate_PlateLightSwitch);
 
-  connect(ui->btn_Setting_Load, &QPushButton::clicked, this, &MainWindow::on_Click_Setting_Load);
-  connect(ui->btn_Setting_Save, &QPushButton::clicked, this, &MainWindow::on_Click_Setting_Save);
+  connect(ui->btn_dhr_serial_connect, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Dhr_serial_connect);
+
+  connect(ui->btn_expandio_connect, &QPushButton::clicked,
+          this, &MainWindow::on_click_exio_connect);
+
+  connect(ui->btn_Setting_Load, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Setting_Load);
+  connect(ui->btn_Setting_Save, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Setting_Save);
 }
 
 void MainWindow::ui_Language_Init() {
@@ -280,6 +327,8 @@ void MainWindow::robot_UiUpdate() {
     ui->btn_robot_gripperToggle->setText("Open gripper");
   }
 
+  ui->label_robot_gripper_state->setText("Gripper state: " + rb::DhGripStateToQString(hansRobot->DHGripper_GetState()));
+
   /// refresh Box digital input state
   ui->radioButton_DI_0->setChecked(hansRobot->GetRobotBoxDI(0));
   ui->radioButton_DI_1->setChecked(hansRobot->GetRobotBoxDI(1));
@@ -338,11 +387,6 @@ void MainWindow::camera_GotNewFrame(cv::Mat frame) {
       model_MatchingTest(frame);
       break;
     case FrameRetrieveMode::kFramePnpRun:
-      //        cv::Mat matchingFrame = imageCropper->cropRuntimeImage(frame);
-      //        matcher->matchingResult.imageCols = matchingFrame.cols;
-      //        matcher->matchingResult.imageRows = matchingFrame.rows;
-      //        controller->ImageProcessing(matchingFrame);
-      //        //        emit controller->image(matchingFrame);
       Mat newMat = imageCropper->cropRuntimeImage(frame);
       emit PnpFrameGrabbed(newMat);
       break;
@@ -413,18 +457,10 @@ void MainWindow::model_PatternEdit(ImageMatch::GeoModel model) {
 void MainWindow::model_MatchingTest(cv::Mat image) {
   Mat newMat = imageCropper->cropRuntimeImage(image);
   matcher->matching(newMat, false, 50);
-  //    qDebug() << "Processing time: " << matcher->matchingResult.ExecutionTime;
-  //    qDebug() << "Low material: " << matcher->matchingResult.isAreaLessThanLimits;
-
-  //    circle(newMat, Point2f(627.137, 468.314), 2, Scalar(255, 0,0), 2);
-  //    camera_UpdateViewFrame(newMat);
-
   camera_UpdateViewFrame(matcher->matchingResult.Image.clone());
-
   rb::DescartesPoint pointPick;
   coorCvt->xMaxPickDistance = 321.0;
   coorCvt->yMaxPickDistance = 196.0;
-
   if(matcher->matchingResult.Objects.size() == 0) {
     return;
   }
@@ -599,6 +635,167 @@ bool MainWindow::plate_UserInputAddress() {
   }
 }
 
+void MainWindow::dhr_UiInitialize() {
+  dhController = new DHController(QThread::NormalPriority, this);
+
+  connect(dhController, &DHController::DHSignal_Connected, this, [this] () {
+    ui->btn_dhr_serial_connect->setText("Disconnect");
+    ui->label_dhr_serial_connect->setText("Serial port connected");
+    ui->label_dhr_serial_name->setText("Port name: " + serial_port_name);
+    if(ui->widget_Rgi_Control->IsAutoInit()) {
+      dhController->DH_AddFuncToQueue(DH_RGI::SetInitDevice(rgi_address));
+    }
+    ui->btn_dhr_serial_connect->setEnabled(true);
+  });
+
+  connect(dhController, &DHController::DHSignal_Disconnected, this, [this] () {
+    ui->btn_dhr_serial_connect->setText("Connect");
+    ui->label_dhr_serial_connect->setText("Serial port no connection");
+    ui->widget_Rgi_Control->SetSlaveEditBoxEnable(true);
+    ui->btn_dhr_serial_connect->setEnabled(true);
+  });
+
+  connect(dhController, &DHController::DHSignal_Connecting, this, [this] () {
+    ui->btn_dhr_serial_connect->setText("Connecting");
+    ui->label_dhr_serial_connect->setText("Serial port connecting");
+  });
+
+  connect(dhController, &DHController::DHSignal_ConnectFail, this,
+          [this] (QString msg) {
+    ui->btn_dhr_serial_connect->setText("Connect");
+    ui->label_dhr_serial_connect->setText("Serial port no connection");
+    ui->widget_Rgi_Control->SetSlaveEditBoxEnable(true);
+    ui->btn_dhr_serial_connect->setEnabled(true);
+  });
+
+  connect(dhController, &DHController::DHSignal_ErrorOccured, this,
+          [this] (QString msg) {
+    ui->statusbar->showMessage(msg, 5000);
+  });
+
+  connect(dhController, &DHController::DHSignal_PollingTriggered,
+          this, &MainWindow::dhr_DisplayRgiInfo);
+
+  connect(ui->widget_Rgi_Control, &DhRgiWidget::SignalsRgiInitialize, this, [this] () {
+    dhController->DH_AddFuncToQueue(DH_RGI::SetInitDevice(rgi_address));
+  });
+
+  connect(ui->widget_Rgi_Control, &DhRgiWidget::SignalsGripper_PositionEdited,
+          this, [this] (int value) {
+    dhController->DH_AddFuncToQueue(
+        DH_RGI::SetGripperPosition(rgi_address, value));
+  });
+
+  connect(ui->widget_Rgi_Control, &DhRgiWidget::SignalsGripper_ForceEdited,
+          this, [this] (int value) {
+    dhController->DH_AddFuncToQueue(
+        DH_RGI::SetGripperForce(rgi_address, value));
+  });
+
+  connect(ui->widget_Rgi_Control, &DhRgiWidget::SignalsGripper_SpeedEdited,
+          this, [this] (int value) {
+    dhController->DH_AddFuncToQueue(
+        DH_RGI::SetGripperSpeed(rgi_address, value));
+  });
+
+  connect(ui->widget_Rgi_Control, &DhRgiWidget::SignalsRotation_AngleEdited,
+          this, [this] (int value) {
+    dhController->DH_AddFuncToQueue(
+        DH_RGI::SetRotationAngle(rgi_address, value));
+  });
+
+  connect(ui->widget_Rgi_Control, &DhRgiWidget::SignalsRotation_TorqueEdited,
+          this, [this] (int value) {
+    dhController->DH_AddFuncToQueue(
+        DH_RGI::SetRotationTorque(rgi_address, value));
+  });
+
+  connect(ui->widget_Rgi_Control, &DhRgiWidget::SignalsRotation_SpeedEdited,
+          this, [this] (int value) {
+    dhController->DH_AddFuncToQueue(
+        DH_RGI::SetRotationSpeed(rgi_address, value));
+  });
+}
+
+void MainWindow::dhr_DisplayRgiInfo(RGIData device_info) {
+  ui->widget_Rgi_Control->ShowRgiDeviceInfo(device_info.feedback);
+}
+
+void MainWindow::ExioUiInitialize() {
+  modbus_exio = new ModbusExpandIO;
+  connect(modbus_exio, &ModbusExpandIO::ModuleIoConnected, this, [this]() {
+    ui->btn_expandio_connect->setText(lb_plate_Disconnect);
+    ui->label_expandio_connect->setText(lb_plate_Connected);
+  });
+
+  connect(modbus_exio, &ModbusExpandIO::ModuleIoDisconnected, this, [this]() {
+    ui->btn_expandio_connect->setText(lb_plate_Connect);
+    ui->label_expandio_connect->setText(lb_plate_Disconnected);
+  });
+
+  connect(modbus_exio, &ModbusExpandIO::ModuleIoConnectInitFail, this, [this](QString msg) {
+    ui->label_expandio_connect->setText(lb_plate_Disconnected);
+    QMessageBox::information(this,lb_plate_dialog_ConnectInfo, lb_plate_ConnectFail + msg, QMessageBox::Ok);
+  });
+
+  connect(modbus_exio, &ModbusExpandIO::ModuleIoConnectFail, this, [this]() {
+    ui->label_expandio_connect->setText(lb_plate_Disconnected);
+    QMessageBox::information(this,lb_plate_dialog_ConnectInfo, lb_plate_ConnectTimeout, QMessageBox::Ok);
+  });
+
+  connect(modbus_exio, &ModbusExpandIO::ModuleIoConnecting, this, [this]() {
+    ui->label_expandio_connect->setText(lb_plate_Connecting);
+    ui->label_expandio_ip->setText(lb_plate_dialog_Address + ": " + modbus_exio_address);
+    ui->label_expandio_port->setText(lb_plate_dialog_ServerPort + ": " + QString::number(modbus_exio_port));
+  });
+
+  connect(modbus_exio, &ModbusExpandIO::ModuleIoDataChanged, this, [this](ExpandIo io) {
+    ui->checkBox_exio_out_0_0->setChecked(io.GetOutputAt(0));
+    ui->checkBox_exio_out_0_1->setChecked(io.GetOutputAt(1));
+    ui->checkBox_exio_out_0_2->setChecked(io.GetOutputAt(2));
+    ui->checkBox_exio_out_0_3->setChecked(io.GetOutputAt(3));
+    ui->checkBox_exio_out_0_4->setChecked(io.GetOutputAt(4));
+    ui->checkBox_exio_out_0_5->setChecked(io.GetOutputAt(5));
+  });
+
+//  connect(ui->checkBox_exio_out_0_0, &QCheckBox::released, this, [this] () {
+//    qDebug() << "Change coils: " << ui->checkBox_exio_out_0_0->isChecked();
+////    modbus_exio->WriteCoils(0, ui->checkBox_exio_out_0_0->isChecked());
+//  });
+
+//  connect(ui->checkBox_exio_out_0_1, &QCheckBox::released, this, [this] () {
+////    modbus_exio->WriteCoils(1, ui->checkBox_exio_out_0_1->isChecked());
+//  });
+
+//  modbus_exio_address = "192.168.1.12";
+//  modbus_exio_port = 502;
+}
+
+bool MainWindow::ExioUserInputAddress() {
+  // setup input dialog form
+  InputFormDialog::FormData data;
+  data[lb_plate_dialog_Address] = modbus_exio_address;
+  data[lb_plate_dialog_ServerPort] = modbus_exio_port;
+  // limits server port number
+  InputFormDialog::FormOptions options;
+  options.numericMin = 0;
+  options.numericMax = 65535;
+
+  while(true) {
+    if(InputFormDialog::getInput("Enter Expand module IO (Modbus TCP) address", data, options)) {
+      QHostAddress h_address(data.at<QString>(lb_plate_dialog_Address));
+      if(h_address.protocol() == QAbstractSocket::IPv4Protocol) {
+        modbus_exio_address = data.at<QString>(lb_plate_dialog_Address);
+        modbus_exio_port = data.at<int>(lb_plate_dialog_ServerPort);
+        return true;
+      }
+    }
+    else {
+      return false;
+    }
+  }
+}
+
 //////////  TIMER ACTIONS
 void MainWindow::on_Timeout_UpdateUiInfo() {
   if(hansRobot->robotIsConnected()) {
@@ -633,6 +830,7 @@ void MainWindow::on_Click_Robot_Enable() {
   switch (state.MachineState) {
     case HansMachineState::Disable:
       hansRobot->pushCommand(rb::HansCommand::GrpPowerOn(0));
+      hansRobot->DHGripper_Open();
       break;
     case HansMachineState::StandBy:
       hansRobot->pushCommand(rb::HansCommand::GrpPowerOff(0));
@@ -661,16 +859,6 @@ void MainWindow::on_Click_Robot_Close() {
 
 void MainWindow::on_Click_Robot_GripperToggle() {
   hansRobot->DHGripper_Toggle();
-  //    hansRobot->pushCommand(HansCommand::SetOverride(0, 1));
-  //    hansRobot->pushCommand(HansCommand::MoveJ(0, JointPoint(171.206,-22.911,91.417,-180.001,-65.672,119.328)));
-  //    hansRobot->pushCommand(HansCommand::WaitStartMove());
-  //    hansRobot->pushCommand(HansCommand::WaitMoveDone());
-  //    for(int i=0;i<10;i++) {
-  //        hansRobot->pushCommand(HansCommand::WayPointL(0, DescartesPoint(0,0,100,180,0,0), "TCP_dh_gripper", "Plane_1", 500, 2500, 50));
-  //        hansRobot->pushCommand(HansCommand::WayPointL(0, DescartesPoint(0,200,100,180,0,0), "TCP_dh_gripper", "Plane_1", 500, 2500, 50));
-  //        hansRobot->pushCommand(HansCommand::WayPointL(0, DescartesPoint(200,200,100,180,0,0), "TCP_dh_gripper", "Plane_1", 500, 2500, 50));
-  //        hansRobot->pushCommand(HansCommand::WayPointL(0, DescartesPoint(200,0,100,180,0,0), "TCP_dh_gripper", "Plane_1", 500, 2500, 50));
-  //    }
 }
 
 void MainWindow::on_Click_Camera_Connect() {
@@ -805,9 +993,37 @@ void MainWindow::on_Click_Plate_Connect() {
   }
 }
 
+void MainWindow::on_click_exio_connect() {
+  if(modbus_exio->IsModuleIoConnected()) {
+    modbus_exio->ModuleIoDisconnect();
+  }
+  else {
+    if(ExioUserInputAddress()) {
+      modbus_exio->ModuleIoConnect(modbus_exio_address, modbus_exio_port);
+    }
+  }
+}
+
 void MainWindow::on_Click_Plate_PlateLightSwitch() {
   FlexibleFeed::FeederData m_data = flexPlate->getFeederData();
   flexPlate->writeLightSwitch(!m_data.lightSourceSwitch);
+}
+
+void MainWindow::on_Click_Dhr_serial_connect() {
+  if(!dhController->DH_IsConnected()) {
+    SerialSettingDialog *serial_dialog = new SerialSettingDialog(this);
+    connect(serial_dialog, &SerialSettingDialog::UserAcceptSerialSetting,
+            this, [this] (SerialSetting setting) {
+      rgi_address = ui->widget_Rgi_Control->GetSlaveAddress();
+      serial_port_name = setting.name;
+      ui->widget_Rgi_Control->SetSlaveEditBoxEnable(false);
+      ui->btn_dhr_serial_connect->setEnabled(false);
+      dhController->DH_Connect(setting);
+    });
+    serial_dialog->ShowDialog();
+  } else {
+    dhController->DH_Disconnect();
+  }
 }
 
 void MainWindow::on_Click_Setting_Load() {

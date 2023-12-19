@@ -22,9 +22,10 @@
 #include "robot/CoordinateCvt.h"
 
 #include "plate/FlexibleFeed.h"
-
+#include "dh-robotic/dhcontroller.h"
+#include "dh-robotic/serialsettingdialog.h"
+#include "expandio/ModbusExpandIO.h"
 #include "setting/SettingHandler.h"
-
 #include "controller/PnpController.h"
 
 QT_BEGIN_NAMESPACE
@@ -89,6 +90,14 @@ private:
   void plate_UiInitialize();
   bool plate_UserInputAddress();
 
+  /// DH-ROBOTICS DEVICE UI FUNCTIONS
+  void dhr_UiInitialize();
+  void dhr_DisplayRgiInfo(dhr::RGIData device_info);
+
+  /// EXPAND IO MODULE
+  void ExioUiInitialize();
+  bool ExioUserInputAddress();
+
   /// PICK AND PLACE CONTROLLER
   void PnpUiInitialize();
 //  void PnpDisplayMatchingImage();
@@ -120,18 +129,10 @@ private:
 
   void on_Click_Plate_Connect();
   void on_Click_Plate_PlateLightSwitch();
-  void on_Click_Plate_Scatt();
-  void on_Click_Plate_LowerLeft();
-  void on_Click_Plate_Upper();
-  void on_Click_Plate_LowerRight();
-  void on_Click_Plate_UpperRight();
-  void on_Click_Plate_Lower();
-  void on_Click_Plate_UpperLeft();
-  void on_Click_Plate_Right();
-  void on_Click_Plate_Left();
-  void on_Click_Plate_UpAndDown();
-  void on_Click_Plate_Around();
-  void on_Click_Plate_Stop();
+
+  void on_Click_Dhr_serial_connect();
+
+  void on_click_exio_connect();
 
   void on_Click_Setting_Load();
   void on_Click_Setting_Save();
@@ -167,6 +168,16 @@ private:
   FlexibleFeed *flexPlate;
   QString plateAddress;
   int plateServerPort;
+
+  /// DH-ROBOTICS
+  dhr::DHController *dhController;
+  int rgi_address;
+  QString serial_port_name;
+
+  /// EXPAND IO MODULE
+  ModbusExpandIO *modbus_exio;
+  QString modbus_exio_address;
+  int modbus_exio_port;
 
   /// CONTROLLER
   PnpController *pnp_controller_;

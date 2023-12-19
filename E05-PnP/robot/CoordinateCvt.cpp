@@ -21,14 +21,13 @@ void CoordinateCvt::convertPickCoordinates(DescartesPoint &pickPoint, Point2f ca
   pickPoint = rotateAxisX(pickPoint, -180.0, 0, yMaxPickDistance, 0);
   pickPoint = rotateAxisZ(pickPoint, -90.0, 0, xMaxPickDistance, 0);
 
-
-  double angle = rawAngle*C_R2D;
-  if (angle > 180.0) {
-    angle -= 180.0;
-  } else if (angle < -180.0) {
-    angle += 180.0;
+  double angle = -rawAngle*C_R2D;
+  if (angle >= 180.0) {
+    angle -= 360.0;
+  } else if (angle <= -180.0) {
+    angle += 360.0;
   }
-  pickPoint.rZ = -angle;
+  pickPoint.rZ = angle;
 }
 
 DescartesPoint CoordinateCvt::rotateAxisX(DescartesPoint &point, double angle, double distanceX, double distanceY, double distanceZ) {
