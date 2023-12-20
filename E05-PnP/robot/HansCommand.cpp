@@ -28,12 +28,12 @@ CmdContain HansCommand::WaitEndDI(int index, bool state) {
   return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitEndDI, index, state);
 }
 
-CmdContain HansCommand::WaitMoveDone() {
-  return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitMoveDone);
+CmdContain HansCommand::WaitMoveDone(int result) {
+  return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitMoveDone, result);
 }
 
-CmdContain HansCommand::WaitStartMove() {
-  return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitStartMove);
+CmdContain HansCommand::WaitStartMove(int result) {
+  return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitStartMove, result);
 }
 
 CmdContain HansCommand::SetVirtualDO(int index, bool state) {

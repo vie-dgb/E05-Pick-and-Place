@@ -103,8 +103,8 @@ signals:
     void RbSignal_BoxDIStrigger(int index, bool state);
     void RbSignal_EndDOStrigger(int index, bool state);
     void RbSignal_EndDIStrigger(int index, bool state);
-    void RbSignal_StartMove();
-    void RbSignal_MoveDone();
+    void RbSignal_MoveDone(int result);
+    void RbSignal_StartMove(int result);
     void DhSignal_InStateMoving();
     void DhSignal_InStateHolding();
     void DhSignal_InStateArrived();

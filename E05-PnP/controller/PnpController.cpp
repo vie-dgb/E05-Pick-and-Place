@@ -6,7 +6,7 @@ PnpController::PnpController(HansClient* const& robot,
                              FlexibleFeed* const& flex_plate,
                              DHController* const& dh_controller) {
   robot_ = robot;
-  matcher_ = matcher;
+  image_matcher_ = matcher;
   coor_converter_ = coordinate_converter;
   flex_plate_ = flex_plate;
   dh_controller_ = dh_controller;
@@ -52,43 +52,63 @@ void PnpController::PnpControllerStop() {
   robot_->RobotStopImmediate();
 }
 
-void PnpController::RobotStartMove() {
-  switch (pnp_state_current_) {
+void PnpController::RobotStartMove(int index) {
+  PnpState state = static_cast<PnpState>(index);
+
+  switch (state) {
     case PnpState::kPnpWaitMoveToStandby:
       emit PnpSignal_HasNewMessage("[PNP Controller]: Moving to standby position.");
       break;
-    case PnpState::kPnpWaitPickingObjects:
+    case PnpState::kPnpWaitMoveToPickPosition:
       emit PnpSignal_HasNewMessage("[PNP Controller]: Moving to pick objects.");
       break;
-    case PnpState::kPnpWaitMoveToRotate:
-      emit PnpSignal_HasNewMessage("[PNP Controller]: Moving to rotate object position.");
+    case PnpState::kPnpWaitPickObject:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Robot picking object.");
       break;
-    case PnpState::kPnpWaitMoveToRotateOut:
-      emit PnpSignal_HasNewMessage("[PNP Controller]: Moving to wait position rotate object.");
+    case PnpState::kPnpWaitMoveToRotatePosition:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Moving to rotate position.");
+      break;
+    case PnpState::kPnpWaitRotateObject:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Rotating object.");
+      break;
+    case PnpState::kPnpWaitMoveToPlacePosition:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Moving to place position.");
+      break;
+    case PnpState::kPnpWaitPlaceObject:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Placing object.");
       break;
   }
 }
 
-void PnpController::RobotMoveDone() {
-  switch (pnp_state_current_) {
+void PnpController::RobotMoveDone(int index) {
+  PnpState state = static_cast<PnpState>(index);
+  switch (state) {
     case PnpState::kPnpWaitMoveToStandby:
       emit PnpSignal_HasNewMessage("[PNP Controller]: Robot in standby position.");
       TriggerGrabFrame();
       break;
-    case PnpState::kPnpWaitPickingObjects:
-      emit PnpSignal_HasNewMessage("[PNP Controller]: Robot picked objects.");
-      SetPnpState(PnpState::kPnpWaitMoveToRotate);
+    case PnpState::kPnpWaitMoveToPickPosition:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Robot in pick position.");
+      SetPnpState(PnpState::kPnpWaitPickObject);
       break;
-    case PnpState::kPnpWaitMoveToRotate:
-      emit PnpSignal_HasNewMessage("[PNP Controller]: Robot moving to rotate object position.");
-      SetPnpState(PnpState::kPnpWaitMoveToRotateOut);
+    case PnpState::kPnpWaitPickObject:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Robot picking object done.");
+      SetPnpState(PnpState::kPnpWaitMoveToRotatePosition);
       break;
-    case PnpState::kPnpWaitMoveToRotateOut:
-      emit PnpSignal_HasNewMessage("[PNP Controller]: Wait rotate object.");
-      SetPnpState(PnpState::kPnpWaitPlacingObjects);
+    case PnpState::kPnpWaitMoveToRotatePosition:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Object in rotate position.");
+      SetPnpState(PnpState::kPnpWaitRotateObject);
       break;
-    case PnpState::kPnpWaitPlacingObjects:
-      emit PnpSignal_HasNewMessage("[PNP Controller]: Robot placed objects.");
+    case PnpState::kPnpWaitRotateObject:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Rotating object.");
+      SetPnpState(PnpState::kPnpWaitMoveToPlacePosition);
+      break;
+    case PnpState::kPnpWaitMoveToPlacePosition:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Robot in place position.");
+      SetPnpState(PnpState::kPnpWaitPlaceObject);
+      break;
+    case PnpState::kPnpWaitPlaceObject:
+      emit PnpSignal_HasNewMessage("[PNP Controller]: Object placed.");
       TriggerGrabFrame();
       break;
   }
@@ -118,12 +138,12 @@ void PnpController::RobotVirtualDOChange(int bit_index, bool state) {
 }
 
 void PnpController::TimerTimeOut() {
-  switch (pnp_state_current_) {
-    case PnpState::kPnpWaitFeed:
-      robot_->pushCommandInFront(HansCommand::SetBoxDO(feeder_port_, false));
-      emit PnpSignal_HasNewMessage("[PNP Controller]: Feeder disable.");
-      break;
-  }
+//  switch (pnp_state_current_) {
+//    case PnpState::kPnpWaitFeed:
+//      robot_->pushCommandInFront(HansCommand::SetBoxDO(feeder_port_, false));
+//      emit PnpSignal_HasNewMessage("[PNP Controller]: Feeder disable.");
+//      break;
+//  }
 }
 
 void PnpController::SetPnpState(PnpState state) {
@@ -145,8 +165,8 @@ void PnpController::MoveToStandby() {
                                              position_standby_,
                                              veloc_low_,
                                              accel_low_, 0));
-  robot_->pushCommand(HansCommand::WaitStartMove());
-  robot_->pushCommand(HansCommand::WaitMoveDone());
+  robot_->pushCommand(HansCommand::WaitStartMove(static_cast<int>(pnp_state_current_)));
+  robot_->pushCommand(HansCommand::WaitMoveDone(static_cast<int>(pnp_state_current_)));
   robot_->DHGripper_Open();
   robot_->pushCommand(HansCommand::WaitTime(2000));
 //  robot_->pushCommand(HansCommand::WaitDhGripperArrived());
@@ -161,16 +181,16 @@ void PnpController::TriggerGrabFrame() {
 void PnpController::ReceivedNewFrame(cv::Mat frame) {
   SetPnpState(PnpState::kPnpImageProcessing);
   emit PnpSignal_HasNewMessage("[PNP Controller]: Received frame, finding match objects.");
-  matcher_->matching(frame, true, 2);
+  image_matcher_->matching(frame, true, 2);
   frame_size_.width = frame.cols;
   frame_size_.height = frame.rows;
   emit PnpSignal_HasNewMessage("[PNP Controller]: Objects found.");
-  emit PnpSignal_DisplayMatchingImage(matcher_->matchingResult.Image);
+  emit PnpSignal_DisplayMatchingImage(image_matcher_->matchingResult.Image);
 
-  is_found_2_objects_ = (matcher_->matchingResult.Objects.size() >= 2) ? true : false;
-  is_less_than_limit_ = matcher_->matchingResult.isAreaLessThanLimits;
+  is_found_2_objects_ = (image_matcher_->matchingResult.Objects.size() >= 2) ? true : false;
+  is_less_than_limit_ = image_matcher_->matchingResult.isAreaLessThanLimits;
 
-  if(matcher_->matchingResult.isFoundMatchObject) {
+  if(image_matcher_->matchingResult.isFoundMatchObject) {
     MovePickAndPlace();
   }
 //  else {
@@ -185,13 +205,13 @@ void PnpController::ReceivedNewFrame(cv::Mat frame) {
 }
 
 void PnpController::MovePickAndPlace() {
-  SetPnpState(PnpState::kPnpWaitPickingObjects);
+  SetPnpState(PnpState::kPnpWaitMoveToPickPosition);
   emit PnpSignal_HasNewMessage("[PNP Controller]: Sending command to robot.");
 
   DescartesPoint pick_point;
   DescartesPoint place_point;
 
-  MatchedObjects matchObj = matcher_->matchingResult.Objects.front();
+  MatchedObjects matchObj = image_matcher_->matchingResult.Objects.front();
   coor_converter_->xMaxPickDistance = 321.0;
   coor_converter_->yMaxPickDistance = 196.0;
   coor_converter_->convertPickCoordinates(pick_point, matchObj.coordinates, matchObj.angle, frame_size_);
@@ -212,96 +232,111 @@ void PnpController::MovePickAndPlace() {
   place_point.tcp = "TCP_dh_gripper";
 
   // push command to queue
-  robot_->pushCommand(HansCommand::SetOverride(0, 20));
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, pick_point,
-                                                   0, 0, 120, 0,
-                                                   veloc_fast_, accel_fast_, 10));
-  robot_->pushCommand(HansCommand::WayPointL(0, pick_point, veloc_low_,
-                                             accel_low_, 10));
-  robot_->pushCommand(HansCommand::WaitStartMove());
-  robot_->pushCommand(HansCommand::WaitMoveDone());
+  robot_->pushCommand(HansCommand::SetOverride(0, 60));
+  // move to pick position
+  robot_->pushCommand(
+      HansCommand::WayPointLRelRef(0, pick_point, 0, 0, 120, 0,
+                                   veloc_fast_, accel_fast_, 10));
+  robot_->pushCommand(
+      HansCommand::WayPointL(0, pick_point, veloc_low_, accel_low_, 10));
+  robot_->pushCommand(
+      HansCommand::WaitStartMove(static_cast<int>(kPnpWaitMoveToPickPosition)));
+  robot_->pushCommand(
+      HansCommand::WaitMoveDone(static_cast<int>(kPnpWaitMoveToPickPosition)));
+
+  // pick object
   robot_->DHGripper_Close();
   robot_->pushCommand(HansCommand::WaitTime(100));
 //  robot_->pushCommand(HansCommand::WaitDhGripperHolding());
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, pick_point,
-                                                   0, 0, 120, 0,
-                                                   veloc_fast_, accel_fast_, 10));
+  robot_->pushCommand(
+      HansCommand::WayPointLRelRef(0, pick_point, 0, 0, 120, 0,
+                                   veloc_fast_, accel_fast_, 10));
 
-  // go to rotate point
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, position_rotate_,
-                                                   0, -50, 50, 0,
-                                                   veloc_low_, veloc_low_, 10));
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, position_rotate_,
-                                                   0, -50, 0, 0,
-                                                   veloc_low_, veloc_low_, 10));
-  robot_->pushCommand(HansCommand::WayPointL(0, position_rotate_, veloc_low_,
-                                             accel_low_, 10));
-  robot_->pushCommand(HansCommand::WaitStartMove());
-  robot_->pushCommand(HansCommand::WaitMoveDone());
-  robot_->pushCommand(HansCommand::SetVirtualDO(virtual_grip_close_, true));
-  robot_->pushCommand(HansCommand::SetVirtualDO(virtual_grip_close_, false));
-  robot_->pushCommand(HansCommand::WaitTime(500));
-  robot_->DHGripper_Open();
-  robot_->pushCommand(HansCommand::WaitTime(500));
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, position_rotate_,
-                                                   0, 0, 50, 0,
-                                                   veloc_low_, veloc_low_, 10));
-  robot_->pushCommand(HansCommand::WaitStartMove());
-  robot_->pushCommand(HansCommand::WaitMoveDone());
   if (matchObj.indexOfSample == 0) {
-    robot_->pushCommand(HansCommand::SetVirtualDO(virtual_rotate_positive_, true));
-    robot_->pushCommand(HansCommand::SetVirtualDO(virtual_rotate_positive_, false));
-
+    // go to rotate point
+    robot_->pushCommand(
+        HansCommand::WayPointLRelRef(0, position_rotate_, 0, -50, 50, 0,
+                                     veloc_low_, veloc_low_, 10));
+    robot_->pushCommand(
+        HansCommand::WayPointLRelRef(0, position_rotate_, 0, -50, 0, 0,
+                                     veloc_low_, veloc_low_, 10));
+    robot_->pushCommand(
+        HansCommand::WayPointL(0, position_rotate_, veloc_low_, accel_low_, 10));
+    robot_->pushCommand(
+        HansCommand::WaitStartMove(static_cast<int>(kPnpWaitMoveToRotatePosition)));
+    robot_->pushCommand(
+        HansCommand::WaitMoveDone(static_cast<int>(kPnpWaitMoveToRotatePosition)));
+    // close rotate grip and move to wait position
+    robot_->pushCommand(
+        HansCommand::SetVirtualDO(virtual_grip_close_, true));
+    robot_->pushCommand(
+        HansCommand::SetVirtualDO(virtual_grip_close_, false));
+    robot_->pushCommand(
+        HansCommand::WaitTime(300));
+    robot_->DHGripper_Open();
+    robot_->pushCommand(
+        HansCommand::WaitTime(500));
+    robot_->pushCommand(
+        HansCommand::WayPointLRelRef(0, position_rotate_, 0, 0, 50, 0,
+                                     veloc_low_, veloc_low_, 10));
+    robot_->pushCommand(
+        HansCommand::WaitStartMove(static_cast<int>(kPnpWaitRotateObject)));
+    robot_->pushCommand(
+        HansCommand::WaitMoveDone(static_cast<int>(kPnpWaitRotateObject)));
+    // rotate object
+    robot_->pushCommand(
+        HansCommand::SetVirtualDO(virtual_rotate_positive_, true));
+    robot_->pushCommand(
+        HansCommand::SetVirtualDO(virtual_rotate_positive_, false));
+    robot_->pushCommand(
+        HansCommand::WaitTime(500));
+    // get position from rotate moudle
+    robot_->pushCommand(
+        HansCommand::WayPointL(0, position_rotate_, veloc_low_, accel_low_, 10));
+    robot_->pushCommand(
+        HansCommand::WaitStartMove(99));
+    robot_->pushCommand(
+        HansCommand::WaitMoveDone(99));
+    robot_->DHGripper_Close();
+    robot_->pushCommand(
+        HansCommand::WaitTime(500));
+    robot_->pushCommand(HansCommand::SetVirtualDO(virtual_grip_open_, true));
+    robot_->pushCommand(HansCommand::SetVirtualDO(virtual_grip_open_, false));
+    robot_->pushCommand(
+        HansCommand::WaitTime(500));
+    robot_->pushCommand(
+        HansCommand::WayPointLRelRef(0, position_rotate_, 0, -50, 0, 0,
+                                     veloc_low_, veloc_low_, 10));
+    robot_->pushCommand(
+        HansCommand::WaitStartMove(99));
+    robot_->pushCommand(
+        HansCommand::WaitMoveDone(99));
+    robot_->pushCommand(HansCommand::SetVirtualDO(virtual_rotate_zero_, true));
+    robot_->pushCommand(HansCommand::SetVirtualDO(virtual_rotate_zero_, false));
   }
-  else {
-    robot_->pushCommand(HansCommand::SetVirtualDO(virtual_rotate_negative_, true));
-    robot_->pushCommand(HansCommand::SetVirtualDO(virtual_rotate_negative_, false));
-  }
-  robot_->pushCommand(HansCommand::WaitTime(500));
-//  robot_->pushCommand(HansCommand::WayPointL(0, position_rotate_, veloc_low_,
-//                                             accel_low_, 10));
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, position_rotate_,
-                                                   0, -20, 50, 0,
-                                                   veloc_low_, veloc_low_, 10));
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, position_rotate_,
-                                                   0, -20, 0, 0,
-                                                   veloc_low_, veloc_low_, 10));
-  robot_->pushCommand(HansCommand::WaitStartMove());
-  robot_->pushCommand(HansCommand::WaitMoveDone());
-  robot_->DHGripper_Close();
-  robot_->pushCommand(HansCommand::WaitTime(500));
-  robot_->pushCommand(HansCommand::SetVirtualDO(virtual_grip_open_, true));
-  robot_->pushCommand(HansCommand::SetVirtualDO(virtual_grip_open_, false));
-  robot_->pushCommand(HansCommand::WaitTime(500));
-//  robot_->pushCommand(HansCommand::WayPointL(0, position_rotate_, veloc_low_,
-//                                             accel_low_, 10));
-
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, position_rotate_,
-                                                   0, -50, 0, 0,
-                                                   veloc_low_, veloc_low_, 10));
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, position_rotate_,
-                                                   0, -50, 50, 0,
-                                                   veloc_low_, veloc_low_, 10));
-  robot_->pushCommand(HansCommand::WaitStartMove());
-  robot_->pushCommand(HansCommand::SetVirtualDO(virtual_rotate_zero_, true));
-  robot_->pushCommand(HansCommand::SetVirtualDO(virtual_rotate_zero_, false));
 
   // go to place position
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, place_point,
-                                                   0, 0, 250, 0,
-                                                   veloc_fast_, accel_fast_, 10));
-  robot_->pushCommand(HansCommand::WayPointL(0, place_point, veloc_low_,
-                                             accel_low_, 10));
-  robot_->pushCommand(HansCommand::WaitStartMove());
-  robot_->pushCommand(HansCommand::WaitMoveDone());
+  robot_->pushCommand(
+      HansCommand::WayPointLRelRef(0, place_point, 0, 0, 250, 0,
+                                   veloc_fast_, accel_fast_, 10));
+  robot_->pushCommand(
+      HansCommand::WayPointL(0, place_point, veloc_low_, accel_low_, 10));
+  robot_->pushCommand(
+      HansCommand::WaitStartMove(static_cast<int>(kPnpWaitMoveToPlacePosition)));
+  robot_->pushCommand(
+      HansCommand::WaitMoveDone(static_cast<int>(kPnpWaitMoveToPlacePosition)));
   robot_->DHGripper_Open();
   robot_->pushCommand(HansCommand::WaitTime(500));
 //  robot_->pushCommand(HansCommand::WaitDhGripperArrived());
-  robot_->pushCommand(HansCommand::WayPointLRelRef(0, place_point,
-                                                   0, 0, 250, 0,
-                                                   veloc_fast_, accel_fast_, 10));
-  robot_->pushCommand(HansCommand::WaitStartMove());
-  robot_->pushCommand(HansCommand::WaitMoveDone());
+  robot_->pushCommand(
+      HansCommand::WayPointLRelRef(0, place_point, 0, 0, 250, 0,
+                                   veloc_fast_, accel_fast_, 10));
+  robot_->pushCommand(
+      HansCommand::WaitStartMove(static_cast<int>(kPnpWaitPlaceObject)));
+  robot_->pushCommand(
+      HansCommand::WaitMoveDone(static_cast<int>(kPnpWaitPlaceObject)));
+
+  emit PnpSignal_HasNewMessage("[PNP Controller]: Sending command to robot done.");
 }
 
 void PnpController::TriggerFeeeder() {
@@ -325,18 +360,18 @@ QString PnpController::PnpStateToQString(PnpState state) {
       return "Grabbing image frame";
     case PnpState::kPnpImageProcessing:
       return "Image processing";
-    case PnpState::kPnpWaitPickingObjects:
-      return "Picking objects";
-    case PnpState::kPnpWaitMoveToRotate:
-      return "Moving to rotate position";
-    case PnpState::kPnpWaitMoveToRotateOut:
-      return "Moving to wait rotate position";
-    case PnpState::kPnpWaitPlacingObjects:
-      return "Placing objects";
-    case PnpState::kPnpWaitFeed:
-      return "Feeding";
-    case PnpState::kPnpWaitPlateScatt:
-      return "Flexible plate scatting";
+    case PnpState::kPnpWaitMoveToPickPosition:
+      return "Moving to pick position";
+    case PnpState::kPnpWaitPickObject:
+      return "Picking object";
+    case PnpState::kPnpWaitMoveToRotatePosition:
+      return "Moving to rotate object positon";
+    case PnpState::kPnpWaitRotateObject:
+      return "Rotating object";
+    case PnpState::kPnpWaitMoveToPlacePosition:
+      return "Moving to place position";
+    case PnpState::kPnpWaitPlaceObject:
+      return "Placing object";
   }
   return "";
 }

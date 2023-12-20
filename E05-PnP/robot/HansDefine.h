@@ -246,8 +246,35 @@ enum HansCmdType : int {
   Cmd_Remote
 };
 
-struct CmdContain
-{
+enum HansInAppCmd : int {
+  kInApp_WaitTime,
+  kInApp_WaitVirtualDI,
+  kInApp_SetVirtualDO,
+  kInApp_WaitBoxDO,
+  kInApp_WaitBoxDI,
+  kInApp_WaitEndDO,
+  kInApp_WaitEndDI,
+  kInApp_WaitMoveDone,
+  kInApp_WaitStartMove,
+  kInApp_WaitDhGripperHolding,
+  kInApp_WaitDhGripperArrived
+};
+
+static HansInAppCmd HashInAppCmd(QString const& cmd_string) {
+  if (cmd_string == CMD_WaitTime) return kInApp_WaitTime;
+  if (cmd_string == CMD_WaitVirtualDI) return kInApp_WaitVirtualDI;
+  if (cmd_string == CMD_SetVirtualDO) return kInApp_SetVirtualDO;
+  if (cmd_string == CMD_WaitBoxDO) return kInApp_WaitBoxDO;
+  if (cmd_string == CMD_WaitBoxDI) return kInApp_WaitBoxDI;
+  if (cmd_string == CMD_WaitEndDO) return kInApp_WaitEndDO;
+  if (cmd_string == CMD_WaitEndDI) return kInApp_WaitEndDI;
+  if (cmd_string == CMD_WaitMoveDone) return kInApp_WaitMoveDone;
+  if (cmd_string == CMD_WaitStartMove) return kInApp_WaitStartMove;
+  if (cmd_string == CMD_WaitDhGripperHolding) return kInApp_WaitDhGripperHolding;
+  if (cmd_string == CMD_WaitDhGripperArrived) return kInApp_WaitDhGripperArrived;
+}
+
+struct CmdContain {
   HansCmdType type = HansCmdType::Cmd_Remote;
   QString command = "";
   int bitIndex = 0;
@@ -274,8 +301,7 @@ struct CmdContain
   }
 };
 
-struct DescartesPoint
-{
+struct DescartesPoint {
   double X = 0.0;
   double Y = 0.0;
   double Z = 0.0;
@@ -311,8 +337,7 @@ struct DescartesPoint
   }
 };
 
-struct JointPoint
-{
+struct JointPoint {
   double J1 = 0.0;
   double J2 = 0.0;
   double J3 = 0.0;
@@ -336,8 +361,7 @@ struct JointPoint
   }
 };
 
-struct HansData
-{
+struct HansData {
   DescartesPoint ActualPosition;
   JointPoint ActualJoint;
   DescartesPoint ActualPCS_Base;
@@ -377,8 +401,7 @@ static QString DhGripStateToQString(DhGripperState state) {
   return "";
 }
 
-struct DhGripper
-{
+struct DhGripper {
   int ouput_1 = 0;
   int ouput_2 = 0;
   int input_1 = 0;

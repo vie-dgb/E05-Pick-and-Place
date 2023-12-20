@@ -18,8 +18,8 @@ public:
     static CmdContain WaitBoxDI(int index, bool state);
     static CmdContain WaitEndDO(int index, bool state);
     static CmdContain WaitEndDI(int index, bool state);
-    static CmdContain WaitMoveDone();
-    static CmdContain WaitStartMove();
+    static CmdContain WaitMoveDone(int result);
+    static CmdContain WaitStartMove(int result);
     static CmdContain SetVirtualDO(int index, bool state);
     static CmdContain WaitDhGripperHolding();
     static CmdContain WaitDhGripperArrived();

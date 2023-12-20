@@ -24,13 +24,12 @@ public:
     kPnpWaitMoveToStandby,
     kPnpWaitGrabbingFrame,
     kPnpImageProcessing,
-    kPnpWaitPickingObjects,
-    kPnpWaitMoveToRotate,
-    kPnpWaitMoveToRotateOut,
-//    kPnpWaitPickFromRotate,
-    kPnpWaitPlacingObjects,
-    kPnpWaitFeed,
-    kPnpWaitPlateScatt
+    kPnpWaitMoveToPickPosition,
+    kPnpWaitPickObject,
+    kPnpWaitMoveToRotatePosition,
+    kPnpWaitRotateObject,
+    kPnpWaitMoveToPlacePosition,
+    kPnpWaitPlaceObject
   };
 
   PnpController(HansClient* const& robot = nullptr,
@@ -49,8 +48,8 @@ public:
   static QString PnpStateToQString(PnpState state);
 
 private:
-  void RobotStartMove();
-  void RobotMoveDone();
+  void RobotStartMove(int index);
+  void RobotMoveDone(int index);
   void RobotVirtualDOChange(int bit_index, bool state);
   void TimerTimeOut();
   void SetPnpState(PnpState state);
@@ -73,7 +72,7 @@ public:
 
 private:
   HansClient *robot_;
-  GeoMatch *matcher_;
+  GeoMatch *image_matcher_;
   CoordinateCvt *coor_converter_;
   FlexibleFeed *flex_plate_;
   DHController *dh_controller_;
@@ -96,8 +95,8 @@ private:
   int waitPlateStable;
 
   int rotating_zero_ = 0;
-  int rotating_positive_ = 90;
-  int rotating_negative_ = -90;
+  int rotating_positive_ = 180;
+  int rotating_negative_ = -180;
   int grip_open_ = 1000;
   int grip_close_ = 0;
 

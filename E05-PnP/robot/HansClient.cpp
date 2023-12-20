@@ -277,74 +277,168 @@ void HansClient::commandHandle()
 
 void HansClient::inAppCommandHandle()
 {
-  if (lastCommand.command == CMD_WaitTime) {
-    /// Wait until time-out
-    if (timeCounter.StartTimeCounter(lastCommand.bitIndex)) {
-      queueCommandPopFront();
-    }
-  } else if (lastCommand.command == CMD_WaitVirtualDI) {
+  HansInAppCmd command = HashInAppCmd(lastCommand.command);
+
+  switch (command) {
+    /// Wait until timeout
+    case kInApp_WaitTime:
+      if (timeCounter.StartTimeCounter(lastCommand.bitIndex)) {
+        queueCommandPopFront();
+      }
+      break;
+
     /// Wait until VIRTUAL input bit chosen active set state
-    if (VirtualDI[lastCommand.bitIndex] == lastCommand.bitState) {
-      emit RbSignal_VirtualDIStrigger(lastCommand.bitIndex,
-                                      lastCommand.bitState);
-      queueCommandPopFront();
-    }
-  } else if (lastCommand.command == CMD_SetVirtualDO) {
-    /// Set state for VIRTUAL output bit
-    if (!robotData.robotState.IsMoving) {
-      VirtualDO[lastCommand.bitIndex] = lastCommand.bitState;
-      emit RbSignal_VirtualDOChange(lastCommand.bitIndex,
-                                    VirtualDO[lastCommand.bitIndex]);
-      queueCommandPopFront();
-    }
-  }
-  else if (lastCommand.command == CMD_WaitBoxDO) {
+    case kInApp_WaitVirtualDI:
+      if (VirtualDI[lastCommand.bitIndex] == lastCommand.bitState) {
+        emit RbSignal_VirtualDIStrigger(lastCommand.bitIndex,
+                                        lastCommand.bitState);
+        queueCommandPopFront();
+      }
+      break;
+
+    /// Set state for VIRTUAL output bit when robot isn't moving
+    case kInApp_SetVirtualDO:
+      if (!robotData.robotState.IsMoving) {
+        VirtualDO[lastCommand.bitIndex] = lastCommand.bitState;
+        emit RbSignal_VirtualDOChange(lastCommand.bitIndex,
+                                      VirtualDO[lastCommand.bitIndex]);
+        queueCommandPopFront();
+      }
+      break;
+
     /// Wait until BOX output bit chosen active set state
-    if (robotData.BoxDO[lastCommand.bitIndex] == lastCommand.bitState) {
-      emit RbSignal_BoxDOStrigger(lastCommand.bitIndex, lastCommand.bitState);
-      queueCommandPopFront();
-    }
-  } else if (lastCommand.command == CMD_WaitBoxDI) {
+    case kInApp_WaitBoxDO:
+
+      if (robotData.BoxDO[lastCommand.bitIndex] == lastCommand.bitState) {
+        emit RbSignal_BoxDOStrigger(lastCommand.bitIndex, lastCommand.bitState);
+        queueCommandPopFront();
+      }
+      break;
+
     /// Wait until BOX input bit chosen active set state
-    if (robotData.BoxDI[lastCommand.bitIndex] == lastCommand.bitState) {
-      emit RbSignal_BoxDIStrigger(lastCommand.bitIndex, lastCommand.bitState);
-      queueCommandPopFront();
-    }
-  } else if (lastCommand.command == CMD_WaitEndDO) {
+    case kInApp_WaitBoxDI:
+      if (robotData.BoxDI[lastCommand.bitIndex] == lastCommand.bitState) {
+        emit RbSignal_BoxDIStrigger(lastCommand.bitIndex, lastCommand.bitState);
+        queueCommandPopFront();
+      }
+      break;
+
     /// Wait until END output bit chosen active set state
-    if (robotData.EndDO[lastCommand.bitIndex] == lastCommand.bitState) {
-      emit RbSignal_EndDOStrigger(lastCommand.bitIndex, lastCommand.bitState);
-      queueCommandPopFront();
-    }
-  } else if (lastCommand.command == CMD_WaitEndDI) {
+    case kInApp_WaitEndDO:
+      if (robotData.EndDO[lastCommand.bitIndex] == lastCommand.bitState) {
+        emit RbSignal_EndDOStrigger(lastCommand.bitIndex, lastCommand.bitState);
+        queueCommandPopFront();
+      }
+      break;
+
     /// Wait until END input bit chosen active set state
-    if (robotData.EndDI[lastCommand.bitIndex] == lastCommand.bitState) {
-      emit RbSignal_EndDIStrigger(lastCommand.bitIndex, lastCommand.bitState);
-      queueCommandPopFront();
-    }
-  } else if (lastCommand.command == CMD_WaitStartMove) {
-    /// Wait until robot in STATE moving
-    if (robotData.robotState.IsMoving) {
-      emit RbSignal_StartMove();
-      queueCommandPopFront();
-    }
-  } else if (lastCommand.command == CMD_WaitMoveDone) {
+    case kInApp_WaitEndDI:
+      if (robotData.EndDI[lastCommand.bitIndex] == lastCommand.bitState) {
+        emit RbSignal_EndDIStrigger(lastCommand.bitIndex, lastCommand.bitState);
+        queueCommandPopFront();
+      }
+      break;
+
     /// Wait until robot in STATE different with moving
-    if (!robotData.robotState.IsMoving) {
-      emit RbSignal_MoveDone();
-      queueCommandPopFront();
-    }
-  } else if (lastCommand.command == CMD_WaitDhGripperHolding) {
+    case kInApp_WaitMoveDone:
+      if (!robotData.robotState.IsMoving) {
+        emit RbSignal_MoveDone(lastCommand.bitIndex);
+        queueCommandPopFront();
+      }
+      break;
+
+    /// Wait until robot in STATE moving
+    case kInApp_WaitStartMove:
+      if (robotData.robotState.IsMoving) {
+        emit RbSignal_StartMove(lastCommand.bitIndex);
+        queueCommandPopFront();
+      }
+      break;
+
     /// Wait hd gripper in state holding
-    if (gripper.last_state == DhGripperState::kGripperHolding) {
-      queueCommandPopFront();
-    }
-  } else if (lastCommand.command == CMD_WaitDhGripperArrived) {
+    case kInApp_WaitDhGripperHolding:
+      if (gripper.last_state == DhGripperState::kGripperHolding) {
+        queueCommandPopFront();
+      }
+      break;
+
     /// Wait hd gripper in state holding
-    if (gripper.last_state == DhGripperState::kGripperArrived) {
-      queueCommandPopFront();
-    }
+    case kInApp_WaitDhGripperArrived:
+      if (gripper.last_state == DhGripperState::kGripperArrived) {
+        queueCommandPopFront();
+      }
+      break;
   }
+
+
+//  if (lastCommand.command == CMD_WaitTime) {
+//    /// Wait until time-out
+//    if (timeCounter.StartTimeCounter(lastCommand.bitIndex)) {
+//      queueCommandPopFront();
+//    }
+//  } else if (lastCommand.command == CMD_WaitVirtualDI) {
+//    /// Wait until VIRTUAL input bit chosen active set state
+//    if (VirtualDI[lastCommand.bitIndex] == lastCommand.bitState) {
+//      emit RbSignal_VirtualDIStrigger(lastCommand.bitIndex,
+//                                      lastCommand.bitState);
+//      queueCommandPopFront();
+//    }
+//  } else if (lastCommand.command == CMD_SetVirtualDO) {
+//    /// Set state for VIRTUAL output bit
+//    if (!robotData.robotState.IsMoving) {
+//      VirtualDO[lastCommand.bitIndex] = lastCommand.bitState;
+//      emit RbSignal_VirtualDOChange(lastCommand.bitIndex,
+//                                    VirtualDO[lastCommand.bitIndex]);
+//      queueCommandPopFront();
+//    }
+//  }
+//  else if (lastCommand.command == CMD_WaitBoxDO) {
+//    /// Wait until BOX output bit chosen active set state
+//    if (robotData.BoxDO[lastCommand.bitIndex] == lastCommand.bitState) {
+//      emit RbSignal_BoxDOStrigger(lastCommand.bitIndex, lastCommand.bitState);
+//      queueCommandPopFront();
+//    }
+//  } else if (lastCommand.command == CMD_WaitBoxDI) {
+//    /// Wait until BOX input bit chosen active set state
+//    if (robotData.BoxDI[lastCommand.bitIndex] == lastCommand.bitState) {
+//      emit RbSignal_BoxDIStrigger(lastCommand.bitIndex, lastCommand.bitState);
+//      queueCommandPopFront();
+//    }
+//  } else if (lastCommand.command == CMD_WaitEndDO) {
+//    /// Wait until END output bit chosen active set state
+//    if (robotData.EndDO[lastCommand.bitIndex] == lastCommand.bitState) {
+//      emit RbSignal_EndDOStrigger(lastCommand.bitIndex, lastCommand.bitState);
+//      queueCommandPopFront();
+//    }
+//  } else if (lastCommand.command == CMD_WaitEndDI) {
+//    /// Wait until END input bit chosen active set state
+//    if (robotData.EndDI[lastCommand.bitIndex] == lastCommand.bitState) {
+//      emit RbSignal_EndDIStrigger(lastCommand.bitIndex, lastCommand.bitState);
+//      queueCommandPopFront();
+//    }
+//  } else if (lastCommand.command == CMD_WaitStartMove) {
+//    /// Wait until robot in STATE moving
+//    if (robotData.robotState.IsMoving) {
+//      emit RbSignal_StartMove();
+//      queueCommandPopFront();
+//    }
+//  } else if (lastCommand.command == CMD_WaitMoveDone) {
+//    /// Wait until robot in STATE different with moving
+//    if (!robotData.robotState.IsMoving) {
+//      emit RbSignal_MoveDone();
+//      queueCommandPopFront();
+//    }
+//  } else if (lastCommand.command == CMD_WaitDhGripperHolding) {
+//    /// Wait hd gripper in state holding
+//    if (gripper.last_state == DhGripperState::kGripperHolding) {
+//      queueCommandPopFront();
+//    }
+//  } else if (lastCommand.command == CMD_WaitDhGripperArrived) {
+//    /// Wait hd gripper in state holding
+//    if (gripper.last_state == DhGripperState::kGripperArrived) {
+//      queueCommandPopFront();
+//    }
+//  }
 }
 
 void HansClient::ImmediateStopHandle() {
