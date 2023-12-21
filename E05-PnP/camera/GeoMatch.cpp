@@ -169,34 +169,42 @@ void GeoMatch::matching(bool boudingBoxChecking, int ObjectsNum) {
       Point2f ROICenter = objects[objCounter].pcaCenter;
 
       objects[objCounter].rotPositive.angle = objects[objCounter].pcaAngle + rawAngle;
-      getRotatedROI(imageSource, objects[objCounter].rotPositive, ROICenter, objects[objCounter].conMinRectArea);
+      getRotatedROI(imageSource, objects[objCounter].rotPositive,
+                    ROICenter, objects[objCounter].conMinRectArea);
       if(matchingScores(objects[objCounter].rotPositive, ModelSrc[modelIndex], maxScores)) {
-        saveMatchedObjectInfo(matchObj, objects[objCounter].rotPositive, ModelSrc[modelIndex], maxScores, objects[objCounter].pcaCenter);
-        matchObj.indexOfSample = modelIndex;
+        saveMatchedObjectInfo(matchObj, objects[objCounter].rotPositive,
+                              ModelSrc[modelIndex], maxScores,
+                              objects[objCounter].pcaCenter, modelIndex);
         break;
       }
 
       objects[objCounter].rotNegative.angle = objects[objCounter].pcaAngle - rawAngle;
-      getRotatedROI(imageSource, objects[objCounter].rotNegative, ROICenter, objects[objCounter].conMinRectArea);
+      getRotatedROI(imageSource, objects[objCounter].rotNegative,
+                    ROICenter, objects[objCounter].conMinRectArea);
       if(matchingScores(objects[objCounter].rotNegative, ModelSrc[modelIndex], maxScores)) {
-        saveMatchedObjectInfo(matchObj, objects[objCounter].rotNegative, ModelSrc[modelIndex], maxScores, objects[objCounter].pcaCenter);
-        matchObj.indexOfSample = modelIndex;
+        saveMatchedObjectInfo(matchObj, objects[objCounter].rotNegative,
+                              ModelSrc[modelIndex], maxScores,
+                              objects[objCounter].pcaCenter, modelIndex);
         break;
       }
 
       objects[objCounter].rotPositive_reverse.angle = objects[objCounter].pcaAngle + rawAngle + CV_PI;
-      getRotatedROI(imageSource, objects[objCounter].rotPositive_reverse, ROICenter, objects[objCounter].conMinRectArea);
+      getRotatedROI(imageSource, objects[objCounter].rotPositive_reverse,
+                    ROICenter, objects[objCounter].conMinRectArea);
       if(matchingScores(objects[objCounter].rotPositive_reverse, ModelSrc[modelIndex], maxScores)) {
-        saveMatchedObjectInfo(matchObj, objects[objCounter].rotPositive_reverse, ModelSrc[modelIndex], maxScores, objects[objCounter].pcaCenter);
-        matchObj.indexOfSample = modelIndex;
+        saveMatchedObjectInfo(matchObj, objects[objCounter].rotPositive_reverse,
+                              ModelSrc[modelIndex], maxScores,
+                              objects[objCounter].pcaCenter, modelIndex);
         break;
       }
 
       objects[objCounter].rotNegative_reverse.angle = objects[objCounter].pcaAngle - rawAngle + CV_PI;
-      getRotatedROI(imageSource, objects[objCounter].rotNegative_reverse, ROICenter, objects[objCounter].conMinRectArea);
+      getRotatedROI(imageSource, objects[objCounter].rotNegative_reverse,
+                    ROICenter, objects[objCounter].conMinRectArea);
       if(matchingScores(objects[objCounter].rotNegative_reverse, ModelSrc[modelIndex], maxScores)) {
-        saveMatchedObjectInfo(matchObj, objects[objCounter].rotNegative_reverse, ModelSrc[modelIndex], maxScores, objects[objCounter].pcaCenter);
-        matchObj.indexOfSample = modelIndex;
+        saveMatchedObjectInfo(matchObj, objects[objCounter].rotNegative_reverse,
+                              ModelSrc[modelIndex], maxScores,
+                              objects[objCounter].pcaCenter, modelIndex);
         break;
       }
     }
@@ -225,7 +233,6 @@ void GeoMatch::matching(bool boudingBoxChecking, int ObjectsNum) {
       }
 
       if(!hasCollision) {
-//        matchObj.indexOfSample = objCounter;
         matchingResult.Objects.push_back(matchObj);
         matchingResult.isFoundMatchObject = true;
 
@@ -268,8 +275,11 @@ void GeoMatch::matching(bool boudingBoxChecking, int ObjectsNum) {
   matchingResult.isAreaLessThanLimits = (sumArea < maxModelSize*5) ? true : false;
 }
 
-void GeoMatch::saveMatchedObjectInfo(MatchedObjects& matched, RotatedObject& objectRotated, GeoModel model, double scores, Point2f pcaCenter) {
+void GeoMatch::saveMatchedObjectInfo(MatchedObjects& matched, RotatedObject& objectRotated,
+                                     GeoModel model, double scores,
+                                     Point2f pcaCenter, int index) {
   matched.name = model.nameOfModel;
+  matched.indexOfSample = index;
   matched.image = objectRotated.image;
   matched.angle = objectRotated.angle + model.getAngleOfModel(true);
   matched.scores = scores;

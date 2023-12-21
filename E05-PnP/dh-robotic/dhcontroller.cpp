@@ -49,10 +49,34 @@ void DHController::DH_AddFuncToQueue(ModbusFunc func) {
 }
 
 void DHController::DH_SetRgiAddress(int address) {
-  device_gri_address_ = address;
+  device_rgi_address_ = address;
+}
+
+void DHController::DH_SetPgcAddress(int address) {
+  device_pgc_address_ = address;
+}
+
+bool DHController::DH_GetRgiData(int address, RGIData &device) {
+  if ((device_rgi == nullptr) || (device_rgi->slave_address_ != address)) {
+    return false;
+  }
+  device = device_rgi->DeviceInfo();
+  return true;
+}
+
+bool DHController::DH_GetPgcData(int address, PGCData &device) {
+  if ((device_pgc == nullptr) || (device_pgc->slave_address_ != address)) {
+    return false;
+  }
+  device = device_pgc->DeviceInfo();
+  return true;
 }
 
 void DHController::run() {
+  if (!DhDeviceInit()) {
+    emit DHSignal_ConnectFail("Setting wrong device address");
+    return;
+  }
   ModbusInit();
   // for sure serial device is connected
   msleep(50);
@@ -61,7 +85,6 @@ void DHController::run() {
   }
   // init objects and emit connected signals;
   ModbusQueueClear();
-  RGI_Init();
   refresh_time_counter_ = new TimeCounter;
   display_time_counter_ = new TimeCounter;
   is_modbus_connected_ = true;
@@ -77,17 +100,19 @@ void DHController::run() {
 
     // polling data read
     if (refresh_time_counter_->StartTimeCounter(refresh_data_time_)) {
-      RGI_Collect_info();
+      DhDeviceCollectInfo();
+      emit DHSignal_PollingTriggered();
     }
     // polling display data
     if (display_time_counter_->StartTimeCounter(refresh_display_time_)) {
-      emit DHSignal_PollingTriggered(device_rgi->DeviceInfo());
+      emit DHSignal_PollingDisplayTriggered();
     }
 
+    if (disconnect_wait_) { continue; }
     ModbusQueueHandle();
   }
 
-  RGI_Uinit();
+  DHDeviceUinit();
 }
 
 void DHController::ModbusInit() {
@@ -253,8 +278,13 @@ void DHController::ModbusWriteHoldingRegister(int slave_address,
 
 void DHController::ModbusHodlingRegsResponse(const int slave_address,
                                              const QModbusDataUnit unit) {
+  if(slave_address == device_pgc->slave_address_) {
+    device_pgc->UpdateData(unit);
+    return;
+  }
   if(slave_address == device_rgi->slave_address_) {
     device_rgi->UpdateData(unit);
+    return;
   }
 }
 
@@ -299,6 +329,16 @@ void DHController::ModbusSendFunction(ModbusFunc func_code) {
     return;
   }
 
+  // in case send slave address not corresponding with current address
+  if ((func_code.slave_address != device_pgc_address_) &&
+      (func_code.slave_address != device_rgi_address_)) {
+    return;
+  }
+
+  if (disconnect_wait_) {
+    return;
+  }
+
   switch (func_code.func_code) {
     case FuncCode::kFuncReadHoldingRegs:
       ModbusReadHodlingRegister(func_code.slave_address,
@@ -313,16 +353,38 @@ void DHController::ModbusSendFunction(ModbusFunc func_code) {
   }
 }
 
-void DHController::RGI_Init() {
-  device_gri_address_ = 1;
-  device_rgi = new DH_RGI(device_gri_address_);
+bool DHController::DhDeviceInit() {
+  if (device_pgc_address_ == device_rgi_address_) {
+    return false;
+  }
+
+  device_pgc = new DH_PGC(device_pgc_address_);
+  device_rgi = new DH_RGI(device_rgi_address_);
+  return true;
 }
 
-void DHController::RGI_Collect_info() {
+void DHController::DhDeviceCollectInfo() {
+  ModbusSendFunction(device_pgc->GetDeviceFeedbackInfo());
   ModbusSendFunction(device_rgi->GetDeviceFeedbackInfo());
+
+  DhGripperStatus pgc_grip_state;
+  if (device_pgc->IsGripperStateChange(pgc_grip_state)) {
+    emit DHSignal_PgcGripperStateChanged(pgc_grip_state);
+  }
+
+  DhGripperStatus rgi_grip_state;
+  if (device_rgi->IsGripperStateChange(rgi_grip_state)) {
+    emit DHSignal_RgiGripperStateChanged(rgi_grip_state);
+  }
+
+  DhRotationStatus rgi_rotate_state;
+  if (device_rgi->IsRotateStateChange(rgi_rotate_state)) {
+    emit DHSignal_RgiRotateStateChanged(rgi_rotate_state);
+  }
 }
 
-void DHController::RGI_Uinit() {
+void DHController::DHDeviceUinit() {
+  delete device_pgc;
   delete device_rgi;
 }
 }

@@ -17,8 +17,10 @@ SOURCES += \
     camera/PatternDialog.cpp \
     camera/PylonGrab.cpp \
     controller/PnpController.cpp \
+    dh-robotic/dh_pgc.cpp \
     dh-robotic/dh_rgi.cpp \
     dh-robotic/dhcontroller.cpp \
+    dh-robotic/dhpgcwidget.cpp \
     dh-robotic/dhrgiwidget.cpp \
     dh-robotic/serialsettingdialog.cpp \
     dialog/InputFormDialog.cpp \
@@ -44,8 +46,10 @@ HEADERS += \
     camera/PatternDialog.h \
     camera/PylonGrab.h \
     controller/PnpController.h \
+    dh-robotic/dh_pgc.h \
     dh-robotic/dh_rgi.h \
     dh-robotic/dhcontroller.h \
+    dh-robotic/dhpgcwidget.h \
     dh-robotic/dhr_define.h \
     dh-robotic/dhrgiwidget.h \
     dh-robotic/serialsettingdialog.h \
@@ -67,6 +71,7 @@ FORMS += \
     camera/CalibCamera.ui \
     camera/ChooseCameraDialog.ui \
     camera/PatternDialog.ui \
+    dh-robotic/dhpgcwidget.ui \
     dh-robotic/dhrgiwidget.ui \
     dh-robotic/serialsettingdialog.ui \
     mainwindow.ui

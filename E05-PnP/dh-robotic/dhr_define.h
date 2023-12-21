@@ -1,14 +1,31 @@
 #ifndef DHR_DEFINE_H
 #define DHR_DEFINE_H
 
+#include <QtGlobal>
 #include <QList>
 #include <QString>
-#include <QtGlobal>
+#include <QMap>
+#include <QModbusDataUnit>
+#include <QDebug>
 
 namespace dhr {
 
 #define SLAVE_ADDRESS_MIN   1
 #define SLAVE_ADDRESS_MAX   247
+
+#define GRIPPER_POSITION_MAX    1000
+#define GRIPPER_POSITION_MIN    0
+#define GRIPPER_FORCE_MAX       100
+#define GRIPPER_FORCE_MIN       20
+#define GRIPPER_SPEED_MAX       100
+#define GRIPPER_SPEED_MIN       0
+
+#define ROTATION_ANGLE_MAX      1800
+#define ROTATION_ANGLE_MIN      -1800
+#define ROTATION_TORQUE_MAX     100
+#define ROTATION_TORQUE_MIN     20
+#define ROTATION_SPEED_MAX      100
+#define ROTATION_SPEED_MIN      0
 
 enum FuncCode : int {
   kFuncReadHoldingRegs = 3,
@@ -153,6 +170,15 @@ static QString EnumConvert(DhError enum_code) {
   }
   return state_string;
 }
+
+struct DhModelInfo
+{
+  quint16 model = 0x00;
+  quint16 hw_version = 0x00;
+  quint16 sw_version = 0x00;
+  quint16 unique_id_low = 0x00;
+  quint16 unique_id_high = 0x00;
+};
 
 struct ModbusFunc {
   int slave_address = 1;

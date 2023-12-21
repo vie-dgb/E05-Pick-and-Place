@@ -93,6 +93,7 @@ private:
   int waitScatt;
   int waitUpper;
   int waitPlateStable;
+  int wait_hans_gripper_time_ = 100;
 
   int rotating_zero_ = 0;
   int rotating_positive_ = 180;

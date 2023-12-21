@@ -262,13 +262,13 @@ void HansClient::commandHandle()
 
   switch (lastCommand.type) {
     case HansCmdType::Cmd_InApp:
-      qDebug() << "In-app command: " << lastCommand.command;
+//      qDebug() << "In-app command: " << lastCommand.command;
       inAppCommandHandle();
       break;
     case HansCmdType::Cmd_Remote:
-      qDebug() << "Send command: " << lastCommand.command;
+//      qDebug() << "Send command: " << lastCommand.command;
       QString reply = sendCommand(lastCommand.command);
-      qDebug() << "Response command: " << reply;
+//      qDebug() << "Response command: " << reply;
       responseHandle(reply);
       queueCommandPopFront();
       break;
@@ -369,76 +369,6 @@ void HansClient::inAppCommandHandle()
       }
       break;
   }
-
-
-//  if (lastCommand.command == CMD_WaitTime) {
-//    /// Wait until time-out
-//    if (timeCounter.StartTimeCounter(lastCommand.bitIndex)) {
-//      queueCommandPopFront();
-//    }
-//  } else if (lastCommand.command == CMD_WaitVirtualDI) {
-//    /// Wait until VIRTUAL input bit chosen active set state
-//    if (VirtualDI[lastCommand.bitIndex] == lastCommand.bitState) {
-//      emit RbSignal_VirtualDIStrigger(lastCommand.bitIndex,
-//                                      lastCommand.bitState);
-//      queueCommandPopFront();
-//    }
-//  } else if (lastCommand.command == CMD_SetVirtualDO) {
-//    /// Set state for VIRTUAL output bit
-//    if (!robotData.robotState.IsMoving) {
-//      VirtualDO[lastCommand.bitIndex] = lastCommand.bitState;
-//      emit RbSignal_VirtualDOChange(lastCommand.bitIndex,
-//                                    VirtualDO[lastCommand.bitIndex]);
-//      queueCommandPopFront();
-//    }
-//  }
-//  else if (lastCommand.command == CMD_WaitBoxDO) {
-//    /// Wait until BOX output bit chosen active set state
-//    if (robotData.BoxDO[lastCommand.bitIndex] == lastCommand.bitState) {
-//      emit RbSignal_BoxDOStrigger(lastCommand.bitIndex, lastCommand.bitState);
-//      queueCommandPopFront();
-//    }
-//  } else if (lastCommand.command == CMD_WaitBoxDI) {
-//    /// Wait until BOX input bit chosen active set state
-//    if (robotData.BoxDI[lastCommand.bitIndex] == lastCommand.bitState) {
-//      emit RbSignal_BoxDIStrigger(lastCommand.bitIndex, lastCommand.bitState);
-//      queueCommandPopFront();
-//    }
-//  } else if (lastCommand.command == CMD_WaitEndDO) {
-//    /// Wait until END output bit chosen active set state
-//    if (robotData.EndDO[lastCommand.bitIndex] == lastCommand.bitState) {
-//      emit RbSignal_EndDOStrigger(lastCommand.bitIndex, lastCommand.bitState);
-//      queueCommandPopFront();
-//    }
-//  } else if (lastCommand.command == CMD_WaitEndDI) {
-//    /// Wait until END input bit chosen active set state
-//    if (robotData.EndDI[lastCommand.bitIndex] == lastCommand.bitState) {
-//      emit RbSignal_EndDIStrigger(lastCommand.bitIndex, lastCommand.bitState);
-//      queueCommandPopFront();
-//    }
-//  } else if (lastCommand.command == CMD_WaitStartMove) {
-//    /// Wait until robot in STATE moving
-//    if (robotData.robotState.IsMoving) {
-//      emit RbSignal_StartMove();
-//      queueCommandPopFront();
-//    }
-//  } else if (lastCommand.command == CMD_WaitMoveDone) {
-//    /// Wait until robot in STATE different with moving
-//    if (!robotData.robotState.IsMoving) {
-//      emit RbSignal_MoveDone();
-//      queueCommandPopFront();
-//    }
-//  } else if (lastCommand.command == CMD_WaitDhGripperHolding) {
-//    /// Wait hd gripper in state holding
-//    if (gripper.last_state == DhGripperState::kGripperHolding) {
-//      queueCommandPopFront();
-//    }
-//  } else if (lastCommand.command == CMD_WaitDhGripperArrived) {
-//    /// Wait hd gripper in state holding
-//    if (gripper.last_state == DhGripperState::kGripperArrived) {
-//      queueCommandPopFront();
-//    }
-//  }
 }
 
 void HansClient::ImmediateStopHandle() {

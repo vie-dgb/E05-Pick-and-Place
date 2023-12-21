@@ -2,11 +2,13 @@
 
 namespace dhr {
 DH_RGI::DH_RGI() {
+  is_first_update_data_ = true;
   InitDataMap();
 }
 
 DH_RGI::DH_RGI(int slave_address) {
   slave_address_ = slave_address;
+  is_first_update_data_ = true;
   InitDataMap();
 }
 
@@ -24,12 +26,43 @@ void DH_RGI::UpdateData(const QModbusDataUnit unit) {
       data_map_[address] = unit.value(index);
     }
   }
+
+  if (is_first_update_data_) {
+    last_grip_state_ = data_map_[feedback_grip_status];
+    last_rotate_state_ = data_map_[feedback_rotation_status];
+    is_first_update_data_ = false;
+    return;
+  }
+
+  if (last_grip_state_ != data_map_[feedback_grip_status]) {
+    is_gripper_state_change_ = true;
+    last_grip_state_ = data_map_[feedback_grip_status];
+  }
+
+  if (last_rotate_state_ != data_map_[feedback_rotation_status]) {
+    is_rotate_state_change_ = true;
+    last_rotate_state_ = data_map_[feedback_rotation_status];
+  }
 }
 
 RGIData DH_RGI::DeviceInfo() {
   RGIData rgi_info;
   ConvertFeedbackData(rgi_info);
   return rgi_info;
+}
+
+bool DH_RGI::IsGripperStateChange(DhGripperStatus &state) {
+  bool result = is_gripper_state_change_;
+  if (result) { is_gripper_state_change_ = false; }
+  state = static_cast<DhGripperStatus>(data_map_[feedback_grip_status]);
+  return result;
+}
+
+bool DH_RGI::IsRotateStateChange(DhRotationStatus &state) {
+  bool result = is_rotate_state_change_;
+  if (result) { is_rotate_state_change_ = false; }
+  state = static_cast<DhRotationStatus>(data_map_[feedback_rotation_status]);
+  return result;
 }
 
 ModbusFunc DH_RGI::GetDeviceFeedbackInfo() {

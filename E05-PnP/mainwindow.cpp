@@ -61,6 +61,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
   cameraControl->deleteLater();
   calibCam->deleteLater();
   flexPlate->deleteLater();
+//  dhController->deleteLater();
   modbus_exio->deleteLater();
   delete matcher;
 
@@ -646,8 +647,11 @@ void MainWindow::dhr_UiInitialize() {
     ui->btn_dhr_serial_connect->setText("Disconnect");
     ui->label_dhr_serial_connect->setText("Serial port connected");
     ui->label_dhr_serial_name->setText("Port name: " + serial_port_name);
-    if(ui->widget_Rgi_Control->IsAutoInit()) {
+    if (ui->widget_Rgi_Control->IsAutoInit()) {
       dhController->DH_AddFuncToQueue(DH_RGI::SetInitDevice(rgi_address));
+    }
+    if (ui->widget_Pgc_Control->IsAutoInit()) {
+      dhController->DH_AddFuncToQueue(DH_PGC::SetInitDevice(pgc_address));
     }
     ui->btn_dhr_serial_connect->setEnabled(true);
   });
@@ -655,7 +659,9 @@ void MainWindow::dhr_UiInitialize() {
   connect(dhController, &DHController::DHSignal_Disconnected, this, [this] () {
     ui->btn_dhr_serial_connect->setText("Connect");
     ui->label_dhr_serial_connect->setText("Serial port no connection");
+    ui->label_dhr_serial_name->setText("Port name: *");
     ui->widget_Rgi_Control->SetSlaveEditBoxEnable(true);
+    ui->widget_Pgc_Control->SetSlaveEditBoxEnable(true);
     ui->btn_dhr_serial_connect->setEnabled(true);
   });
 
@@ -667,8 +673,11 @@ void MainWindow::dhr_UiInitialize() {
   connect(dhController, &DHController::DHSignal_ConnectFail, this,
           [this] (QString msg) {
     ui->btn_dhr_serial_connect->setText("Connect");
-    ui->label_dhr_serial_connect->setText("Serial port no connection");
+//    ui->label_dhr_serial_connect->setText("Serial port no connection");
+    ui->label_dhr_serial_connect->setText("Serial " + msg);
+    ui->label_dhr_serial_name->setText("Port name: *");
     ui->widget_Rgi_Control->SetSlaveEditBoxEnable(true);
+    ui->widget_Pgc_Control->SetSlaveEditBoxEnable(true);
     ui->btn_dhr_serial_connect->setEnabled(true);
   });
 
@@ -677,8 +686,29 @@ void MainWindow::dhr_UiInitialize() {
     ui->statusbar->showMessage(msg, 5000);
   });
 
-  connect(dhController, &DHController::DHSignal_PollingTriggered,
+  connect(dhController, &DHController::DHSignal_PollingDisplayTriggered,
           this, &MainWindow::dhr_DisplayRgiInfo);
+
+//  connect(dhController, &DHController::DHSignal_PgcGripperStateChanged,
+//          this, [this] (DhGripperStatus state) {
+//    ui->statusbar->showMessage("PGC Gripper: " + dhr::EnumConvert(state) +
+//                               " - " + QString::number(test_counter));
+//    test_counter += 1;
+//  });
+
+//  connect(dhController, &DHController::DHSignal_RgiGripperStateChanged,
+//          this, [this] (DhGripperStatus state) {
+//    ui->statusbar->showMessage("RGI Gripper: " + dhr::EnumConvert(state) +
+//                               " - " + QString::number(test_counter));
+//    test_counter += 1;
+//  });
+
+//  connect(dhController, &DHController::DHSignal_RgiRotateStateChanged,
+//          this, [this] (DhRotationStatus state) {
+//    ui->statusbar->showMessage("RGI Rotation: " + dhr::EnumConvert(state) +
+//                               " - " + QString::number(test_counter));
+//    test_counter += 1;
+//  });
 
   connect(ui->widget_Rgi_Control, &DhRgiWidget::SignalsRgiInitialize, this, [this] () {
     dhController->DH_AddFuncToQueue(DH_RGI::SetInitDevice(rgi_address));
@@ -719,10 +749,44 @@ void MainWindow::dhr_UiInitialize() {
     dhController->DH_AddFuncToQueue(
         DH_RGI::SetRotationSpeed(rgi_address, value));
   });
+
+  connect(ui->widget_Pgc_Control, &DhPgcWidget::SignalsRgiInitialize, this, [this] () {
+    dhController->DH_AddFuncToQueue(DH_PGC::SetInitDevice(pgc_address));
+  });
+
+  connect(ui->widget_Pgc_Control, &DhPgcWidget::SignalsGripper_PositionEdited,
+          this, [this] (int value) {
+    dhController->DH_AddFuncToQueue(
+        DH_PGC::SetGripperPosition(pgc_address, value));
+  });
+
+  connect(ui->widget_Pgc_Control, &DhPgcWidget::SignalsGripper_ForceEdited,
+          this, [this] (int value) {
+    dhController->DH_AddFuncToQueue(
+        DH_PGC::SetGripperForce(pgc_address, value));
+  });
+
+  connect(ui->widget_Pgc_Control, &DhPgcWidget::SignalsGripper_SpeedEdited,
+          this, [this] (int value) {
+    dhController->DH_AddFuncToQueue(
+        DH_PGC::SetGripperSpeed(pgc_address, value));
+  });
 }
 
-void MainWindow::dhr_DisplayRgiInfo(RGIData device_info) {
-  ui->widget_Rgi_Control->ShowRgiDeviceInfo(device_info.feedback);
+void MainWindow::dhr_DisplayRgiInfo() {
+  RGIData rgi_data;
+  PGCData pgc_data;
+  if (!dhController->DH_GetRgiData(rgi_address, rgi_data)) {
+    this->statusBar()->showMessage("Get device info fail");
+    return;
+  }
+  if (!dhController->DH_GetPgcData(pgc_address, pgc_data)) {
+    this->statusBar()->showMessage("Get device info fail");
+    return;
+  }
+
+  ui->widget_Rgi_Control->ShowRgiDeviceInfo(rgi_data.feedback);
+  ui->widget_Pgc_Control->ShowPgcDeviceInfo(pgc_data.feedback);
 }
 
 void MainWindow::ExioUiInitialize() {
@@ -1018,10 +1082,15 @@ void MainWindow::on_Click_Dhr_serial_connect() {
     SerialSettingDialog *serial_dialog = new SerialSettingDialog(this);
     connect(serial_dialog, &SerialSettingDialog::UserAcceptSerialSetting,
             this, [this] (SerialSetting setting) {
-      rgi_address = ui->widget_Rgi_Control->GetSlaveAddress();
+      if (setting.name.isEmpty()) { return; }
       serial_port_name = setting.name;
+      rgi_address = ui->widget_Rgi_Control->GetSlaveAddress();
       ui->widget_Rgi_Control->SetSlaveEditBoxEnable(false);
+      pgc_address = ui->widget_Pgc_Control->GetSlaveAddress();
+      ui->widget_Pgc_Control->SetSlaveEditBoxEnable(false);
       ui->btn_dhr_serial_connect->setEnabled(false);
+      dhController->DH_SetRgiAddress(rgi_address);
+      dhController->DH_SetPgcAddress(pgc_address);
       dhController->DH_Connect(setting);
     });
     serial_dialog->ShowDialog();

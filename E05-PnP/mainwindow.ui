@@ -2971,7 +2971,7 @@
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>200</width>
+                 <width>400</width>
                  <height>24</height>
                 </size>
                </property>
@@ -3039,6 +3039,17 @@
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_25">
+          <item>
+           <widget class="DhPgcWidget" name="widget_Pgc_Control" native="true">
+            <property name="font">
+             <font>
+              <family>Segoe UI Variable Text Semibold</family>
+              <pointsize>12</pointsize>
+              <bold>true</bold>
+             </font>
+            </property>
+           </widget>
+          </item>
           <item>
            <widget class="DhRgiWidget" name="widget_Rgi_Control" native="true">
             <property name="font">
@@ -3704,6 +3715,12 @@
    <class>DhRgiWidget</class>
    <extends>QWidget</extends>
    <header location="global">dh-robotic/dhrgiwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DhPgcWidget</class>
+   <extends>QWidget</extends>
+   <header>dh-robotic/dhpgcwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

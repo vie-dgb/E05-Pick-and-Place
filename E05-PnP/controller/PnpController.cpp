@@ -232,7 +232,7 @@ void PnpController::MovePickAndPlace() {
   place_point.tcp = "TCP_dh_gripper";
 
   // push command to queue
-  robot_->pushCommand(HansCommand::SetOverride(0, 60));
+  robot_->pushCommand(HansCommand::SetOverride(0, 100));
   // move to pick position
   robot_->pushCommand(
       HansCommand::WayPointLRelRef(0, pick_point, 0, 0, 120, 0,
@@ -256,10 +256,10 @@ void PnpController::MovePickAndPlace() {
     // go to rotate point
     robot_->pushCommand(
         HansCommand::WayPointLRelRef(0, position_rotate_, 0, -50, 50, 0,
-                                     veloc_low_, veloc_low_, 10));
+                                     veloc_fast_, accel_fast_, 10));
     robot_->pushCommand(
         HansCommand::WayPointLRelRef(0, position_rotate_, 0, -50, 0, 0,
-                                     veloc_low_, veloc_low_, 10));
+                                     veloc_fast_, veloc_fast_, 10));
     robot_->pushCommand(
         HansCommand::WayPointL(0, position_rotate_, veloc_low_, accel_low_, 10));
     robot_->pushCommand(
@@ -275,10 +275,10 @@ void PnpController::MovePickAndPlace() {
         HansCommand::WaitTime(300));
     robot_->DHGripper_Open();
     robot_->pushCommand(
-        HansCommand::WaitTime(500));
+        HansCommand::WaitTime(wait_hans_gripper_time_));
     robot_->pushCommand(
         HansCommand::WayPointLRelRef(0, position_rotate_, 0, 0, 50, 0,
-                                     veloc_low_, veloc_low_, 10));
+                                     veloc_fast_, veloc_fast_, 10));
     robot_->pushCommand(
         HansCommand::WaitStartMove(static_cast<int>(kPnpWaitRotateObject)));
     robot_->pushCommand(
@@ -289,7 +289,7 @@ void PnpController::MovePickAndPlace() {
     robot_->pushCommand(
         HansCommand::SetVirtualDO(virtual_rotate_positive_, false));
     robot_->pushCommand(
-        HansCommand::WaitTime(500));
+        HansCommand::WaitTime(300));
     // get position from rotate moudle
     robot_->pushCommand(
         HansCommand::WayPointL(0, position_rotate_, veloc_low_, accel_low_, 10));
@@ -299,14 +299,14 @@ void PnpController::MovePickAndPlace() {
         HansCommand::WaitMoveDone(99));
     robot_->DHGripper_Close();
     robot_->pushCommand(
-        HansCommand::WaitTime(500));
+        HansCommand::WaitTime(wait_hans_gripper_time_));
     robot_->pushCommand(HansCommand::SetVirtualDO(virtual_grip_open_, true));
     robot_->pushCommand(HansCommand::SetVirtualDO(virtual_grip_open_, false));
     robot_->pushCommand(
-        HansCommand::WaitTime(500));
+        HansCommand::WaitTime(300));
     robot_->pushCommand(
         HansCommand::WayPointLRelRef(0, position_rotate_, 0, -50, 0, 0,
-                                     veloc_low_, veloc_low_, 10));
+                                     veloc_fast_, veloc_fast_, 10));
     robot_->pushCommand(
         HansCommand::WaitStartMove(99));
     robot_->pushCommand(
@@ -326,7 +326,7 @@ void PnpController::MovePickAndPlace() {
   robot_->pushCommand(
       HansCommand::WaitMoveDone(static_cast<int>(kPnpWaitMoveToPlacePosition)));
   robot_->DHGripper_Open();
-  robot_->pushCommand(HansCommand::WaitTime(500));
+  robot_->pushCommand(HansCommand::WaitTime(wait_hans_gripper_time_));
 //  robot_->pushCommand(HansCommand::WaitDhGripperArrived());
   robot_->pushCommand(
       HansCommand::WayPointLRelRef(0, place_point, 0, 0, 250, 0,

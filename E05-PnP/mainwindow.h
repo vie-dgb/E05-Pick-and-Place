@@ -92,7 +92,7 @@ private:
 
   /// DH-ROBOTICS DEVICE UI FUNCTIONS
   void dhr_UiInitialize();
-  void dhr_DisplayRgiInfo(dhr::RGIData device_info);
+  void dhr_DisplayRgiInfo();
 
   /// EXPAND IO MODULE
   void ExioUiInitialize();
@@ -171,8 +171,10 @@ private:
 
   /// DH-ROBOTICS
   dhr::DHController *dhController;
-  int rgi_address;
   QString serial_port_name;
+  int rgi_address;
+  int pgc_address;
+  int test_counter = 0;
 
   /// EXPAND IO MODULE
   ModbusExpandIO *modbus_exio;

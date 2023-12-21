@@ -95,7 +95,8 @@ namespace ImageMatch {
     private:
         void getRotatedROI(Mat& matSrc, RotatedObject& object, Point center, RotatedRect minRectArea);
         bool matchingScores(RotatedObject& objectRotated, GeoModel& model, double& lastMaxScores);
-        void saveMatchedObjectInfo(MatchedObjects& matched, RotatedObject& objectRotated, GeoModel model, double scores, Point2f pcaCenter);
+        void saveMatchedObjectInfo(MatchedObjects& matched, RotatedObject& objectRotated,
+                                   GeoModel model, double scores, Point2f pcaCenter, int index);
         bool checkPickBoxCollision(std::vector<Point2f> pickingBox, std::vector<Point> contour);
 
         static Mat cropImageWithBorderOffset(Mat sourceImage, Rect boxBounding,int border);
