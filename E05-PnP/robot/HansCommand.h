@@ -14,13 +14,15 @@ public:
     //////// IN-APP COMMAND
     static CmdContain WaitTime(int timeout);
     static CmdContain WaitVirtualDI(int index, bool state);
+    static CmdContain SetVirtualDO(int index, bool state);
     static CmdContain WaitBoxDO(int index, bool state);
     static CmdContain WaitBoxDI(int index, bool state);
     static CmdContain WaitEndDO(int index, bool state);
     static CmdContain WaitEndDI(int index, bool state);
     static CmdContain WaitMoveDone(int result);
     static CmdContain WaitStartMove(int result);
-    static CmdContain SetVirtualDO(int index, bool state);
+    static CmdContain TriggerOutputInt(int value);
+    static CmdContain WaitContinueTrigger();
     static CmdContain WaitDhGripperHolding();
     static CmdContain WaitDhGripperArrived();
 

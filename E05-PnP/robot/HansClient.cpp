@@ -10,6 +10,7 @@ HansClient::HansClient(QThread::Priority _priority)
   threadRunning = false;
   isRobotConnected = false;
   is_immediate_stop_ = false;
+  continue_trigger_ = false;
   commandPortState = ConnectState::NotConnect;
   feedbackPortState = ConnectState::NotConnect;
 }
@@ -94,6 +95,12 @@ bool HansClient::GetVirtualDI(int index)
   state = VirtualDI[index];
   mutexQueue.unlock();
   return state;
+}
+
+void HansClient::SetContinueTrigger() {
+  mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
+  continue_trigger_ = true;
+  mutexQueue.unlock();
 }
 
 void HansClient::DHGripper_Setup(int input1, int input2, int output1, int output2)
@@ -351,6 +358,20 @@ void HansClient::inAppCommandHandle()
     case kInApp_WaitStartMove:
       if (robotData.robotState.IsMoving) {
         emit RbSignal_StartMove(lastCommand.bitIndex);
+        queueCommandPopFront();
+      }
+      break;
+
+    /// Trigger output int value
+    case kInApp_TriggerOutputInt:
+      emit RbSignal_TriggeredOutputInt(lastCommand.bitIndex);
+      queueCommandPopFront();
+      break;
+
+    /// Wait until robot in STATE moving
+    case kInApp_WaitContinueTrigger:
+      if (continue_trigger_) {
+        continue_trigger_ = false;
         queueCommandPopFront();
       }
       break;

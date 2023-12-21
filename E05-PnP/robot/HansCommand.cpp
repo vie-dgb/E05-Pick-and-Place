@@ -12,6 +12,10 @@ CmdContain HansCommand::WaitVirtualDI(int index, bool state) {
   return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitVirtualDI, index, state);
 }
 
+CmdContain HansCommand::SetVirtualDO(int index, bool state) {
+  return CmdContain(HansCmdType::Cmd_InApp, CMD_SetVirtualDO, index, state);
+}
+
 CmdContain HansCommand::WaitBoxDO(int index, bool state) {
   return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitBoxDO, index, state);
 }
@@ -36,8 +40,12 @@ CmdContain HansCommand::WaitStartMove(int result) {
   return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitStartMove, result);
 }
 
-CmdContain HansCommand::SetVirtualDO(int index, bool state) {
-  return CmdContain(HansCmdType::Cmd_InApp, CMD_SetVirtualDO, index, state);
+CmdContain HansCommand::TriggerOutputInt(int value) {
+  return CmdContain(HansCmdType::Cmd_InApp, CMD_TriggerOuputInt, value);
+}
+
+CmdContain HansCommand::WaitContinueTrigger() {
+  return CmdContain(HansCmdType::Cmd_InApp, CMD_WaitContinueTrigger);
 }
 
 CmdContain HansCommand::WaitDhGripperHolding() {

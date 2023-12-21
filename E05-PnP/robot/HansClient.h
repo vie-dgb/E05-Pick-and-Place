@@ -42,6 +42,7 @@ public:
     /// In-App control functions
     void SetVirtualDI(int index, bool state);
     bool GetVirtualDI(int index);
+    void SetContinueTrigger();
 
     /// Optional functions
     void DHGripper_Setup(int input1, int input2, int output1, int output2);
@@ -105,6 +106,7 @@ signals:
     void RbSignal_EndDIStrigger(int index, bool state);
     void RbSignal_MoveDone(int result);
     void RbSignal_StartMove(int result);
+    void RbSignal_TriggeredOutputInt(int value);
     void DhSignal_InStateMoving();
     void DhSignal_InStateHolding();
     void DhSignal_InStateArrived();
@@ -143,6 +145,7 @@ signals:
 
     /// Emmergency stop flag
     bool is_immediate_stop_;
+    bool continue_trigger_;
 };
 
 }

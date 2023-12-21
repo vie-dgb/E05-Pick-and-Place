@@ -22,13 +22,15 @@
 
 #define CMD_WaitTime                "WaitTime"
 #define CMD_WaitVirtualDI           "WaitVirtualDI"
+#define CMD_SetVirtualDO            "SetVirtualDO"
 #define CMD_WaitBoxDO               "WaitBoxDO"
 #define CMD_WaitBoxDI               "WaitBoxDI"
 #define CMD_WaitEndDO               "WaitEndDO"
 #define CMD_WaitEndDI               "WaitEndDI"
 #define CMD_WaitMoveDone            "WaitMoveDone"
 #define CMD_WaitStartMove           "WaitStartMove"
-#define CMD_SetVirtualDO            "SetVirtualDO"
+#define CMD_TriggerOuputInt         "TriggerOutputInt"
+#define CMD_WaitContinueTrigger     "WaitContinueTrigger"
 #define CMD_WaitDhGripper           "WaitDhGripper"
 #define CMD_WaitDhGripperHolding    "WaitDhGripperHolding"
 #define CMD_WaitDhGripperArrived    "WaitDhGripperArrived"
@@ -256,6 +258,8 @@ enum HansInAppCmd : int {
   kInApp_WaitEndDI,
   kInApp_WaitMoveDone,
   kInApp_WaitStartMove,
+  kInApp_TriggerOutputInt,
+  kInApp_WaitContinueTrigger,
   kInApp_WaitDhGripperHolding,
   kInApp_WaitDhGripperArrived
 };
@@ -270,6 +274,8 @@ static HansInAppCmd HashInAppCmd(QString const& cmd_string) {
   if (cmd_string == CMD_WaitEndDI) return kInApp_WaitEndDI;
   if (cmd_string == CMD_WaitMoveDone) return kInApp_WaitMoveDone;
   if (cmd_string == CMD_WaitStartMove) return kInApp_WaitStartMove;
+  if (cmd_string == CMD_TriggerOuputInt) return kInApp_TriggerOutputInt;
+  if (cmd_string == CMD_WaitContinueTrigger) return kInApp_WaitContinueTrigger;
   if (cmd_string == CMD_WaitDhGripperHolding) return kInApp_WaitDhGripperHolding;
   if (cmd_string == CMD_WaitDhGripperArrived) return kInApp_WaitDhGripperArrived;
 }

@@ -80,8 +80,8 @@ void MainWindow::PnpUiInitialize() {
   pnp_controller_->PnpControllerInit();
 
   connect(pnp_controller_, &PnpController::PnpSignal_StateChanged, this,
-          [this] (QString state_content) {
-    ui->label_dashboard_pnp_state->setText("PNP state: " + state_content);
+          [this] (PnpController::PnpState state) {
+    ui->label_dashboard_pnp_state->setText("PNP state: " + PnpController::StateToQString(state));
   });
 
   connect(pnp_controller_, &PnpController::PnpSignal_HasNewMessage,
