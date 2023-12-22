@@ -175,7 +175,7 @@ void GeoMatch::matching(bool boudingBoxChecking, int ObjectsNum) {
         saveMatchedObjectInfo(matchObj, objects[objCounter].rotPositive,
                               ModelSrc[modelIndex], maxScores,
                               objects[objCounter].pcaCenter, modelIndex);
-        break;
+//        break;
       }
 
       objects[objCounter].rotNegative.angle = objects[objCounter].pcaAngle - rawAngle;
@@ -185,7 +185,7 @@ void GeoMatch::matching(bool boudingBoxChecking, int ObjectsNum) {
         saveMatchedObjectInfo(matchObj, objects[objCounter].rotNegative,
                               ModelSrc[modelIndex], maxScores,
                               objects[objCounter].pcaCenter, modelIndex);
-        break;
+//        break;
       }
 
       objects[objCounter].rotPositive_reverse.angle = objects[objCounter].pcaAngle + rawAngle + CV_PI;
@@ -195,7 +195,7 @@ void GeoMatch::matching(bool boudingBoxChecking, int ObjectsNum) {
         saveMatchedObjectInfo(matchObj, objects[objCounter].rotPositive_reverse,
                               ModelSrc[modelIndex], maxScores,
                               objects[objCounter].pcaCenter, modelIndex);
-        break;
+//        break;
       }
 
       objects[objCounter].rotNegative_reverse.angle = objects[objCounter].pcaAngle - rawAngle + CV_PI;
@@ -205,7 +205,7 @@ void GeoMatch::matching(bool boudingBoxChecking, int ObjectsNum) {
         saveMatchedObjectInfo(matchObj, objects[objCounter].rotNegative_reverse,
                               ModelSrc[modelIndex], maxScores,
                               objects[objCounter].pcaCenter, modelIndex);
-        break;
+//        break;
       }
     }
 
@@ -272,7 +272,7 @@ void GeoMatch::matching(bool boudingBoxChecking, int ObjectsNum) {
 
   matchingResult.ExecutionTime = duration.count();
   matchingResult.hasObjectsInPlate = objectsInPlate;
-  matchingResult.isAreaLessThanLimits = (sumArea < maxModelSize*5) ? true : false;
+  matchingResult.isAreaLessThanLimits = (sumArea < maxModelSize*7) ? true : false;
 }
 
 void GeoMatch::saveMatchedObjectInfo(MatchedObjects& matched, RotatedObject& objectRotated,

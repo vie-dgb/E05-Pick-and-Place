@@ -77,7 +77,6 @@ void MainWindow::initUiEvent() {
 
 void MainWindow::PnpUiInitialize() {
   pnp_controller_ = new PnpController(hansRobot, matcher, coorCvt, flexPlate, dhController);
-  pnp_controller_->PnpControllerInit();
 
   connect(pnp_controller_, &PnpController::PnpSignal_StateChanged, this,
           [this] (PnpController::PnpState state) {
@@ -429,8 +428,8 @@ void MainWindow::calibCamera_Closed(bool status) {
 
 void MainWindow::model_UiInitialize() {
   matcher = new ImageMatch::GeoMatch;
-  matcher->pickingBoxSize.height = 100;
-  matcher->pickingBoxSize.width = 40;
+  matcher->pickingBoxSize.height = 135;
+  matcher->pickingBoxSize.width = 55;
 }
 
 void MainWindow::model_UpdateViewList() {
@@ -476,11 +475,12 @@ void MainWindow::model_MatchingTest(cv::Mat image) {
   imageSize.height = newMat.rows;
   coorCvt->convertPickCoordinates(pointPick, matchObj.coordinates, matchObj.angle, imageSize);
 
-  qDebug() << "Image width: " << imageSize.width;
-  qDebug() << "Image height: " << imageSize.height;
-  qDebug() << "X position: " << pointPick.X;
-  qDebug() << "Y position: " << pointPick.Y;
-  qDebug() << "Angle: " << pointPick.rZ;
+  qDebug() << "Excution time:" << matcher->matchingResult.ExecutionTime;
+  qDebug() << "Image width:" << imageSize.width;
+  qDebug() << "Image height:" << imageSize.height;
+  qDebug() << "X position:" << pointPick.X;
+  qDebug() << "Y position:" << pointPick.Y;
+  qDebug() << "Angle:" << pointPick.rZ;
 }
 
 void MainWindow::DisplayImageFrame(QLabel *lableContainer, cv::Mat image, double scale_factor) {

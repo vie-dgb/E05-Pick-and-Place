@@ -20,7 +20,8 @@ class PnpController : public QObject
   Q_OBJECT
 public:
   enum PnpState : int {
-    kPnpInit = 0,             // end when all condition true
+    kPnpStandby = 0,          // stand by state
+    kPnpInit,                 // end when all condition true
     kPnpWaitMoveToStandby,    // end by pgc grip state changed == arrived
     kPnpWaitGrabbingFrame,    // end by call ReceivedNewFrame
     kPnpImageProcessing,      // end when image processing done
@@ -32,7 +33,7 @@ public:
   };
 
   enum PnpMoveState : int {
-    kPnpMoveIdle = 100,       // initial state, that mean robot not moving
+    kPnpMoveIdle = 1000,       // initial state, that mean robot not moving
     kPnpMoveToPickPosition,   // end by move done
     kPnpMovePicking,          // end by pgc grip state changed == clamping
     kPnpMoveToRotatePosition, // end by rgi grip state changed == clamping
@@ -62,9 +63,9 @@ public:
                 DHController* const& dh_controller = nullptr);
   ~PnpController();
 
-  void PnpControllerInit();
   void PnpControllerStart();
   void PnpControllerStop();
+  bool PnpControllerIsRunning();
   void ReceivedNewFrame(cv::Mat frame);
 
   static QString StateToQString(PnpState state);
@@ -73,7 +74,7 @@ public:
 private:
   void SetPnpState(PnpState state);
   void SetPnpMoveState(PnpMoveState state);
-
+  void InitProcess();
   void RobotStartMove(int index);
   void RobotMoveDone(int index);
   void RobotOuputIntTriggered(int value);
@@ -84,10 +85,13 @@ private:
   void MoveToStandby();
   void TriggerGrabFrame();
   void MovePickAndPlace();
+  void ReCheckMatchObjects();
 
   // Sub device control
   void TriggerFeeeder();
   void TriggerPlateScatt();
+  void TriggerPlateUpper();
+  void TriggerPlateWaitStable();
   void FeederEnable(bool state);
 
 signals:
@@ -100,15 +104,33 @@ signals:
 public:
   DescartesPoint position_standby_;
   DescartesPoint position_rotate_;
-  int pgc_address = 1;
-  int rgi_address = 2;
+  int pgc_address_ = 1;
+  int rgi_address_ = 2;
+
+  const double veloc_fast_ = 2500.0;
+  const double veloc_low_ = 2000.0;
+  const double accel_fast_ = 2500.0;
+  const double accel_low_ = 2000.0;
+
+  const int rgi_rotating_zero_ = 0;
+  const int rgi_rotating_positive_ = 90;
+  const int rgi_rotating_negative_ = -90;
+  const int rgi_grip_open_pos_ = 1000;
+  const int rgi_grip_close_pos_ = 0;
+  const int pgc_grip_open_pos_ = 250;
+  const int pgc_grip_close_pos_ = 0;
+
+  const int wait_feeding_time_ = 1500;
+  const int wait_plate_scatt_time_ = 3000;
+  const int wait_plate_upper_time_ = 3000;
+  const int wait_plate_stable_time_ = 1000;
 
 private:
-  HansClient *robot_;
-  GeoMatch *image_matcher_;
-  CoordinateCvt *coor_converter_;
-  FlexibleFeed *flex_plate_;
-  DHController *dh_controller_;
+  HansClient *robot_ = nullptr;
+  GeoMatch *image_matcher_ = nullptr;
+  CoordinateCvt *coor_converter_ = nullptr;
+  FlexibleFeed *flex_plate_ = nullptr;
+  DHController *dh_controller_ = nullptr;
 
   PnpState pnp_state_current_;
   PnpState pnp_state_previous_;
@@ -118,29 +140,17 @@ private:
   bool is_less_than_limit_;
   Size frame_size_;
 
-//  const double veloc_fast_ = 500.0;
-//  const double veloc_low_ = 300.0;
-  const double veloc_fast_ = 2500.0;
-  const double veloc_low_ = 2000.0;
-  const double accel_fast_ = 2500.0;
-  const double accel_low_ = 2000.0;
-
   QTimer *pnp_timer;
-  int waitFeeding;
-  int waitScatt;
-  int waitUpper;
-  int waitPlateStable;
-  int wait_hans_gripper_time_ = 100;
 
   int object_rotate_angle_;
 
-  int rgi_rotating_zero_ = 0;
-  int rgi_rotating_positive_ = 90;
-  int rgi_rotating_negative_ = -90;
-  int rgi_grip_open_pos_ = 1000;
-  int rgi_grip_close_pos_ = 0;
-  int pgc_grip_open_pos_ = 250;
-  int pgc_grip_close_pos_ = 0;
+  bool is_possible_pick_ = false;
+
+  int sum_picked_objects_ = 0;
+  int sum_picked_col_ = 0;
+  int sum_picked_row_ = 0;
+  const double col_distance_ = 35.0;
+  const double row_distance_ = 74.0;
 
   int feeder_port_ = 7;
   int bit_rgi_rotate_zero_ = 0;
