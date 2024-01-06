@@ -34,16 +34,16 @@ public:
 
   enum PnpMoveState : int {
     kPnpMoveIdle = 1000,       // initial state, that mean robot not moving
-    kPnpMoveToPickPosition,   // end by move done
-    kPnpMovePicking,          // end by pgc grip state changed == clamping
-    kPnpMoveToRotatePosition, // end by rgi grip state changed == clamping
-    kPnpMoveRotateRelease,    // end by pgc grip state changed == arrived
-    kPnpMoveRotateObject,     // end by rgi move state changed == angle reached
-    kPnpMovePickAfterRotate,  // end by pgc grip state changed == clamping
-    kPnpMoveRotateRelease2,   // end by rgi grip state changed == arrived
-    kPnpMoveToPlacePosition,  // end by move done
-    kPnpMovePlacing,          // end by pgc grip state changed == arrived
-    kPnpMoveToEndPosition,    // end by move done, trigger MOVE PICK AND PLACE DONE
+    kPnpMoveToPickPosition,   // trigger when robot move done
+    kPnpMovePicking,          // trigger when pgc grip state changed == clamping
+    kPnpMoveToRotatePosition, // trigger when rgi grip state changed == clamping
+    kPnpMoveRotateRelease,    // trigger when pgc grip state changed == arrived
+    kPnpMoveRotateObject,     // trigger when rgi move state changed == angle reached
+    kPnpMovePickAfterRotate,  // trigger when pgc grip state changed == clamping
+    kPnpMoveRotateRelease2,   // trigger when rgi grip state changed == arrived
+    kPnpMoveToPlacePosition,  // trigger when move done
+    kPnpMovePlacing,          // trigger when pgc grip state changed == arrived
+    kPnpMoveToEndPosition,    // trigger when move done, trigger MOVE PICK AND PLACE DONE
   };
 
   enum PnpDevicePin : int {

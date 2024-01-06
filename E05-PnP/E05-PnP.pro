@@ -29,6 +29,10 @@ SOURCES += \
     loadFile/SettingFile.cpp \
     main.cpp \
     mainwindow.cpp \
+    mc_protocol/fxremote.cpp \
+    mc_protocol/fxwidget.cpp \
+    mc_protocol/mcprotocol.cpp \
+    mc_protocol/plcdevice.cpp \
     plate/FlexibleFeed.cpp \
     robot/CoordinateCvt.cpp \
     robot/HansClient.cpp \
@@ -58,6 +62,10 @@ HEADERS += \
     expandio/ModbusExpandIO.h \
     loadFile/SettingFile.h \
     mainwindow.h \
+    mc_protocol/fxremote.h \
+    mc_protocol/fxwidget.h \
+    mc_protocol/mcprotocol.h \
+    mc_protocol/plcdevice.h \
     plate/FlexibleFeed.h \
     robot/CoordinateCvt.h \
     robot/HansClient.h \
@@ -74,7 +82,8 @@ FORMS += \
     dh-robotic/dhpgcwidget.ui \
     dh-robotic/dhrgiwidget.ui \
     dh-robotic/serialsettingdialog.ui \
-    mainwindow.ui
+    mainwindow.ui \
+    mc_protocol/fxwidget.ui
 
 TRANSLATIONS += \
     E05-PnP_vi_VN.ts \

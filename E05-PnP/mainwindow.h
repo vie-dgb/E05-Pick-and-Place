@@ -24,15 +24,17 @@
 #include "plate/FlexibleFeed.h"
 #include "dh-robotic/dhcontroller.h"
 #include "dh-robotic/serialsettingdialog.h"
-#include "expandio/ModbusExpandIO.h"
+//#include "expandio/ModbusExpandIO.h"
 #include "setting/SettingHandler.h"
 #include "controller/PnpController.h"
+#include "mc_protocol/fxremote.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
 using namespace rb;
+using namespace fx;
 
 class MainWindow : public QMainWindow
 {
@@ -94,10 +96,6 @@ private:
   void dhr_UiInitialize();
   void dhr_DisplayRgiInfo();
 
-  /// EXPAND IO MODULE
-  void ExioUiInitialize();
-  bool ExioUserInputAddress();
-
   /// PICK AND PLACE CONTROLLER
   void PnpUiInitialize();
 //  void PnpDisplayMatchingImage();
@@ -131,8 +129,6 @@ private:
   void on_Click_Plate_PlateLightSwitch();
 
   void on_Click_Dhr_serial_connect();
-
-  void on_click_exio_connect();
 
   void on_Click_Setting_Load();
   void on_Click_Setting_Save();
@@ -177,9 +173,7 @@ private:
   int test_counter = 0;
 
   /// EXPAND IO MODULE
-  ModbusExpandIO *modbus_exio;
-  QString modbus_exio_address;
-  int modbus_exio_port;
+  FxRemote *fx_plc;
 
   /// CONTROLLER
   PnpController *pnp_controller_;

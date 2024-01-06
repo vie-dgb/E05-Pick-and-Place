@@ -16,7 +16,8 @@ MainWindow::MainWindow(QWidget *parent)
   model_UiInitialize();
   plate_UiInitialize();
   dhr_UiInitialize();
-  ExioUiInitialize();
+  fx_plc = new FxRemote();
+  ui->widget_FxPlc->FxSetPlcInstance(fx_plc);
   PnpUiInitialize();
   // show main dashboard first
   ui->tabWidget_Main->setCurrentIndex(0);
@@ -62,7 +63,6 @@ void MainWindow::closeEvent(QCloseEvent *event) {
   calibCam->deleteLater();
   flexPlate->deleteLater();
 //  dhController->deleteLater();
-  modbus_exio->deleteLater();
   delete matcher;
 
   // accept event (accept close application)
@@ -198,9 +198,6 @@ void MainWindow::connectUiEvent() {
 
   connect(ui->btn_dhr_serial_connect, &QPushButton::clicked,
           this, &MainWindow::on_Click_Dhr_serial_connect);
-
-  connect(ui->btn_expandio_connect, &QPushButton::clicked,
-          this, &MainWindow::on_click_exio_connect);
 
   connect(ui->btn_Setting_Load, &QPushButton::clicked,
           this, &MainWindow::on_Click_Setting_Load);
@@ -789,81 +786,6 @@ void MainWindow::dhr_DisplayRgiInfo() {
   ui->widget_Pgc_Control->ShowPgcDeviceInfo(pgc_data.feedback);
 }
 
-void MainWindow::ExioUiInitialize() {
-  modbus_exio = new ModbusExpandIO;
-  connect(modbus_exio, &ModbusExpandIO::ModuleIoConnected, this, [this]() {
-    ui->btn_expandio_connect->setText(lb_plate_Disconnect);
-    ui->label_expandio_connect->setText(lb_plate_Connected);
-  });
-
-  connect(modbus_exio, &ModbusExpandIO::ModuleIoDisconnected, this, [this]() {
-    ui->btn_expandio_connect->setText(lb_plate_Connect);
-    ui->label_expandio_connect->setText(lb_plate_Disconnected);
-  });
-
-  connect(modbus_exio, &ModbusExpandIO::ModuleIoConnectInitFail, this, [this](QString msg) {
-    ui->label_expandio_connect->setText(lb_plate_Disconnected);
-    QMessageBox::information(this,lb_plate_dialog_ConnectInfo, lb_plate_ConnectFail + msg, QMessageBox::Ok);
-  });
-
-  connect(modbus_exio, &ModbusExpandIO::ModuleIoConnectFail, this, [this]() {
-    ui->label_expandio_connect->setText(lb_plate_Disconnected);
-    QMessageBox::information(this,lb_plate_dialog_ConnectInfo, lb_plate_ConnectTimeout, QMessageBox::Ok);
-  });
-
-  connect(modbus_exio, &ModbusExpandIO::ModuleIoConnecting, this, [this]() {
-    ui->label_expandio_connect->setText(lb_plate_Connecting);
-    ui->label_expandio_ip->setText(lb_plate_dialog_Address + ": " + modbus_exio_address);
-    ui->label_expandio_port->setText(lb_plate_dialog_ServerPort + ": " + QString::number(modbus_exio_port));
-  });
-
-  connect(modbus_exio, &ModbusExpandIO::ModuleIoDataChanged, this, [this](ExpandIo io) {
-    ui->checkBox_exio_out_0_0->setChecked(io.GetOutputAt(0));
-    ui->checkBox_exio_out_0_1->setChecked(io.GetOutputAt(1));
-    ui->checkBox_exio_out_0_2->setChecked(io.GetOutputAt(2));
-    ui->checkBox_exio_out_0_3->setChecked(io.GetOutputAt(3));
-    ui->checkBox_exio_out_0_4->setChecked(io.GetOutputAt(4));
-    ui->checkBox_exio_out_0_5->setChecked(io.GetOutputAt(5));
-  });
-
-//  connect(ui->checkBox_exio_out_0_0, &QCheckBox::released, this, [this] () {
-//    qDebug() << "Change coils: " << ui->checkBox_exio_out_0_0->isChecked();
-////    modbus_exio->WriteCoils(0, ui->checkBox_exio_out_0_0->isChecked());
-//  });
-
-//  connect(ui->checkBox_exio_out_0_1, &QCheckBox::released, this, [this] () {
-////    modbus_exio->WriteCoils(1, ui->checkBox_exio_out_0_1->isChecked());
-//  });
-
-//  modbus_exio_address = "192.168.1.12";
-//  modbus_exio_port = 502;
-}
-
-bool MainWindow::ExioUserInputAddress() {
-  // setup input dialog form
-  InputFormDialog::FormData data;
-  data[lb_plate_dialog_Address] = modbus_exio_address;
-  data[lb_plate_dialog_ServerPort] = modbus_exio_port;
-  // limits server port number
-  InputFormDialog::FormOptions options;
-  options.numericMin = 0;
-  options.numericMax = 65535;
-
-  while(true) {
-    if(InputFormDialog::getInput("Enter Expand module IO (Modbus TCP) address", data, options)) {
-      QHostAddress h_address(data.at<QString>(lb_plate_dialog_Address));
-      if(h_address.protocol() == QAbstractSocket::IPv4Protocol) {
-        modbus_exio_address = data.at<QString>(lb_plate_dialog_Address);
-        modbus_exio_port = data.at<int>(lb_plate_dialog_ServerPort);
-        return true;
-      }
-    }
-    else {
-      return false;
-    }
-  }
-}
-
 //////////  TIMER ACTIONS
 void MainWindow::on_Timeout_UpdateUiInfo() {
   if(hansRobot->robotIsConnected()) {
@@ -1057,17 +979,6 @@ void MainWindow::on_Click_Plate_Connect() {
   else {
     if(plate_UserInputAddress()) {
       flexPlate->FeederConnect(plateAddress, plateServerPort);
-    }
-  }
-}
-
-void MainWindow::on_click_exio_connect() {
-  if(modbus_exio->IsModuleIoConnected()) {
-    modbus_exio->ModuleIoDisconnect();
-  }
-  else {
-    if(ExioUserInputAddress()) {
-      modbus_exio->ModuleIoConnect(modbus_exio_address, modbus_exio_port);
     }
   }
 }

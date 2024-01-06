@@ -150,7 +150,7 @@ void HansClient::run()
 {
   initClient();
 
-  // close connect when one them connect fail
+  // close connect when one of them connect fail
   if (!isRobotConnected) {
     closeAllConnect();
     return;
@@ -537,7 +537,7 @@ void HansClient::feedbackFromHostHandle()
         continue;
       }
       int data_Size = charToUint(pBuffer + index + 8);
-      // just for sure
+      // just for sure received correct format
       if ((total_Size - data_Size) == 12) {
         dataSheet = raw.mid(index + 12, data_Size);
         feedbackParseData(dataSheet);
