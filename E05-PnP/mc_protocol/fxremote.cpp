@@ -111,6 +111,18 @@ QString FxRemote::FxPlcModelName() {
   return plc_model_name_;
 }
 
+bool FxRemote::GetAuxiliaryRelayState(int device_number, bool &get_value) {
+  bool is_get_success = false;
+  mutex_data_.tryLock(FX_MUTEX_BLOCK_TIME);
+  if (device_map_.m_map.contains(device_number)) {
+    get_value = device_map_.m_map[device_number];
+//    qDebug() << "Get value M Device:" << device_map_.m_map[device_number];
+    is_get_success = true;
+  }
+  mutex_data_.unlock();
+  return is_get_success;
+}
+
 bool FxRemote::FxIsPlcRunMode() {
   return plc_is_running_mode_;
 }
@@ -295,7 +307,13 @@ void FxRemote::ResponseHandle(McProtocol::McResult &result) {
       for (int index=0;index<result.response_data.count();index++) {
         int map_key = result.device_start_number + index;
         if (device_map_.m_map.contains(map_key)) {
-          device_map_.m_map[map_key] = (result.response_data[index] == 0) ? false : true;
+          bool new_state = (result.response_data[index] == 0) ? false : true;
+          if (device_map_.m_map[map_key] != new_state) {
+//            qDebug() << "New state at M" << QString::number(map_key)
+//                     << ":" << new_state;
+            emit FxSignal_DeivceMChangedState(map_key, new_state);
+          }
+          device_map_.m_map[map_key] = new_state;
         }
         SpecialAuxiliaryRelayCheck(map_key, result.response_data[index]);
       }
@@ -304,7 +322,13 @@ void FxRemote::ResponseHandle(McProtocol::McResult &result) {
       for (int index=0;index<result.response_data.count();index++) {
         int map_key = result.device_start_number + index;
         if (device_map_.y_map.contains(map_key)) {
-          device_map_.y_map[map_key] = (result.response_data[index] == 0) ? false : true;
+          bool new_state = (result.response_data[index] == 0) ? false : true;
+          if (device_map_.y_map[map_key] != new_state) {
+//            qDebug() << "New state at Y" << QString::number(map_key)
+//                     << ":" << new_state;
+            emit FxSignal_DeivceYChangedState(map_key, new_state);
+          }
+          device_map_.y_map[map_key] = new_state;
         }
       }
       break;
@@ -317,6 +341,12 @@ void FxRemote::ResponseHandle(McProtocol::McResult &result) {
           quint8 low_byte = static_cast<quint8>(result.response_data[index]);
           quint8 high_byte = static_cast<quint8>(result.response_data[index+1]);
           quint16 value = (high_byte << 8) + low_byte;
+          quint16 previous_value = device_map_.d_map[map_key];
+          if (previous_value != value) {
+//            qDebug() << "New state at D" << QString::number(map_key)
+//                     << ":" << value;
+            emit FxSignal_DeviceDChangedValue(map_key, value);
+          }
           device_map_.d_map[map_key] = value;
         }
       }

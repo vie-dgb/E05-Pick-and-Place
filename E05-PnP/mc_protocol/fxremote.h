@@ -50,6 +50,7 @@ public:
   void FxSetPlcStopMode();
   void FxGetModelName();
   QString FxPlcModelName();
+  bool GetAuxiliaryRelayState(int device_number, bool &get_value);
   bool FxIsPlcRunMode();
   bool FxIsPlcErrorOccurred();
   void FxSetDeviceMap(FxPlc::DeviceMap &device_map);
@@ -78,6 +79,9 @@ signals:
   void FxSignal_PollingQueryStriggered(FxPlc::DeviceMap device_map);
   void FxSingal_ModifyDeviceBit(FxPlc::DeviceName device_name, bool value);
   void FxSingal_ModifyDeviceWord(FxPlc::DeviceName device_name, quint16 value);
+  void FxSignal_DeivceMChangedState(int m_number, bool value);
+  void FxSignal_DeivceYChangedState(int m_number, bool value);
+  void FxSignal_DeviceDChangedValue(int d_number, int value);
 
 private:
   QThread::Priority thread_priority_;

@@ -76,7 +76,12 @@ void MainWindow::initUiEvent() {
 }
 
 void MainWindow::PnpUiInitialize() {
-  pnp_controller_ = new PnpController(hansRobot, matcher, coorCvt, flexPlate, dhController);
+  pnp_controller_ = new PnpController(hansRobot,
+                                      matcher,
+                                      coorCvt,
+                                      flexPlate,
+                                      dhController,
+                                      fx_plc);
 
   connect(pnp_controller_, &PnpController::PnpSignal_StateChanged, this,
           [this] (PnpController::PnpState state) {

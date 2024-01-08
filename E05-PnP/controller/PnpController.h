@@ -10,10 +10,12 @@
 #include "camera/GeoMatch.h"
 #include "plate/FlexibleFeed.h"
 #include "dh-robotic/dhcontroller.h"
+#include "mc_protocol/fxremote.h"
 
 using namespace rb;
 using namespace ImageMatch;
 using namespace dhr;
+using namespace fx;
 
 class PnpController : public QObject
 {
@@ -25,6 +27,8 @@ public:
     kPnpWaitMoveToStandby,    // end by pgc grip state changed == arrived
     kPnpWaitGrabbingFrame,    // end by call ReceivedNewFrame
     kPnpImageProcessing,      // end when image processing done
+    kPnpWaitMoveConfirm,      // enter this state when current move confirm flag is reset,
+                              // move on next state when move confirm flag is set
     kPnpWaitRobotMove,        // end when robot move to end position
     kPnpWaitFeed,
     kPnpWaitScatt,
@@ -48,19 +52,21 @@ public:
 
   enum PnpDevicePin : int {
     kPnpPin_RgiRotate_Zero,
-    kPnpPin_RgiRotate_Positive,
+    kPnpPin_RgiRotate_Angle,
     kPnpPin_RgiRotate_Negative,
     kPnpPin_RgiGrip_Open,
     kPnpPin_RgiGrip_Close,
     kPnpPin_PgcGrip_Open,
     kPnpPin_PgcGrip_Close,
+    kPnpPin_PlcMoveConfirm
   };
 
   PnpController(HansClient* const& robot = nullptr,
                 GeoMatch* const& matcher = nullptr,
                 CoordinateCvt* const& coordinate_converter = nullptr,
                 FlexibleFeed* const& flex_plate = nullptr,
-                DHController* const& dh_controller = nullptr);
+                DHController* const& dh_controller = nullptr,
+                FxRemote* const& fx_plc = nullptr);
   ~PnpController();
 
   void PnpControllerStart();
@@ -81,6 +87,7 @@ private:
   void RgiGripperStateChanged(DhGripperStatus state);
   void RgiRotateStateChanged(DhRotationStatus state);
   void PgcGripperStateChanged(DhGripperStatus state);
+  void PlcMDeviceChanged(int number, bool value);
   void TimerTimeOut();
   void MoveToStandby();
   void TriggerGrabFrame();
@@ -131,6 +138,7 @@ private:
   CoordinateCvt *coor_converter_ = nullptr;
   FlexibleFeed *flex_plate_ = nullptr;
   DHController *dh_controller_ = nullptr;
+  FxRemote *fx_plc_ = nullptr;
 
   PnpState pnp_state_current_;
   PnpState pnp_state_previous_;
@@ -160,6 +168,11 @@ private:
   int bit_rgi_grip_close_ = 4;
   int bit_pgc_grip_open_ = 5;
   int bit_pgc_grip_close_ = 6;
+
+  int m_device_move_confirm_ = 0;
+  int m_device_emmer_stop_ = 4;
+
+  bool plc_move_confirm_flag_ = false;
 };
 
 #endif // PNPCONTROLLER_H
