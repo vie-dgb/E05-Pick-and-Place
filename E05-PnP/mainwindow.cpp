@@ -317,6 +317,12 @@ void MainWindow::robot_UiUpdate() {
     case HansMachineState::Blackout_48V:
       ui->btn_robot_enable->setText("Open");
       break;
+    case HansMachineState::Error:
+      ui->btn_robot_enable->setText("Reset");
+      break;
+    case HansMachineState::RobotCollisionStop:
+      ui->btn_robot_enable->setText("Reset");
+      break;
     case HansMachineState::EmergencyStop:
       ui->btn_robot_enable->setText("Reset");
       break;
@@ -832,6 +838,12 @@ void MainWindow::on_Click_Robot_Enable() {
       break;
     case HansMachineState::Blackout_48V:
       hansRobot->pushCommand(rb::HansCommand::Electrify());
+      break;
+    case HansMachineState::Error:
+      hansRobot->pushCommand(rb::HansCommand::GrpReset(0));
+      break;
+    case HansMachineState::RobotCollisionStop:
+      hansRobot->pushCommand(rb::HansCommand::GrpReset(0));
       break;
     case HansMachineState::EmergencyStop:
       hansRobot->pushCommand(rb::HansCommand::GrpReset(0));

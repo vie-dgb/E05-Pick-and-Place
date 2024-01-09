@@ -6,5 +6,7 @@
         <file>icon/robot_arm.ico</file>
         <file>icon/setting.ico</file>
         <file>icon/flexible-plate.ico</file>
+        <file>icon/gripper.ico</file>
+        <file>icon/plc.ico</file>
     </qresource>
 </RCC>

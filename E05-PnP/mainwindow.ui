@@ -2901,6 +2901,11 @@
        </layout>
       </widget>
       <widget class="QWidget" name="tab_DHR">
+       <attribute name="icon">
+        <iconset>
+         <normalon>:/icon/gripper.ico</normalon>
+        </iconset>
+       </attribute>
        <attribute name="title">
         <string>DHR Deivce</string>
        </attribute>
@@ -3098,6 +3103,11 @@
        <property name="enabled">
         <bool>true</bool>
        </property>
+       <attribute name="icon">
+        <iconset>
+         <normalon>:/icon/plc.ico</normalon>
+        </iconset>
+       </attribute>
        <attribute name="title">
         <string>FX PLC</string>
        </attribute>

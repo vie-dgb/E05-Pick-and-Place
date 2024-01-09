@@ -40,6 +40,23 @@ PnpController::PnpController(HansClient* const& robot,
 PnpController::~PnpController() {}
 
 void PnpController::PnpControllerStart() {
+
+  if (!robot_->robotIsConnected()) {
+    return;
+  }
+
+  if (!fx_plc_->FxIsConnected()) {
+    return;
+  }
+
+  if (!flex_plate_->isFeederConnected()) {
+    return;
+  }
+
+  if (!dh_controller_->DH_IsConnected()) {
+    return;
+  }
+
   if (pnp_state_current_ != PnpState::kPnpStandby) {
     emit PnpSignal_HasNewMessage("[PNP Controller]: Process is running.");
     return;
@@ -49,6 +66,10 @@ void PnpController::PnpControllerStart() {
 }
 
 void PnpController::PnpControllerStop() {
+  if (pnp_state_current_ = PnpState::kPnpStandby) {
+    return;
+  }
+
   robot_->RobotStopImmediate();
   if (pnp_timer->isActive()) {
     pnp_timer->stop();
@@ -56,6 +77,7 @@ void PnpController::PnpControllerStop() {
   flex_plate_->writeCommunicateMode(FlexibleFeed::CommunicationMode::Stop);
   SetPnpState(PnpState::kPnpStandby);
   SetPnpMoveState(PnpMoveState::kPnpMoveIdle);
+  fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_pnp_running_, true);
   emit PnpSignal_HasNewMessage("[PNP Controller]: Process is stopped.");
 }
 
@@ -83,10 +105,6 @@ void PnpController::ReceivedNewFrame(cv::Mat frame) {
     } else {
       SetPnpState(PnpState::kPnpWaitRobotMove);
     }
-//    is_possible_pick_ = true;
-//    if (move_state_current_ == PnpMoveState::kPnpMoveIdle) {
-//      MovePickAndPlace();
-//    }
   }
   else {
     // in case not found any matching objects
@@ -191,7 +209,11 @@ void PnpController::InitProcess() {
   sum_picked_row_ = 0;
   flex_plate_->writeVibrationMode(FlexibleFeed::VibrationMode::Last);
   // add handle when get start flag from plc fail
-  fx_plc_->GetAuxiliaryRelayState(m_device_move_confirm_, plc_move_confirm_flag_);
+//  fx_plc_->GetAuxiliaryRelayState(m_device_place_confirm_, plc_place_confirm_flag_);
+  fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_pnp_running_, true);
+  fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_place_complete_, false);
+  fx_plc_->FxWriteWord(FxPlc::kPLCDevice_D,
+                       d_device_sample_counter_, sum_picked_objects_);
   MoveToStandby();
 }
 
@@ -206,6 +228,7 @@ void PnpController::RobotStartMove(int index) {
   PnpMoveState move_state = static_cast<PnpMoveState>(index);
   switch (move_state) {
     case PnpMoveState::kPnpMoveToPickPosition:
+      fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_place_complete_, false);
       emit PnpSignal_HasNewMessage("[PNP Controller]: Robot moving to pick position.");
       break;
     case PnpMoveState::kPnpMoveToRotatePosition:
@@ -247,8 +270,12 @@ void PnpController::RobotMoveDone(int index) {
       break;
     case PnpMoveState::kPnpMoveToEndPosition:
       emit PnpSignal_HasNewMessage("[PNP Controller]: Robot moving to end position.");
+//      m_device_place_complete_
+      fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_place_complete_, true);
       SetPnpMoveState(kPnpMoveIdle);
       sum_picked_objects_ += 1;
+      fx_plc_->FxWriteWord(FxPlc::kPLCDevice_D,
+                           d_device_sample_counter_, sum_picked_objects_);
       if (sum_picked_objects_ >= 21) {
         PnpControllerStop();
         break;
@@ -295,12 +322,13 @@ void PnpController::RobotOuputIntTriggered(int value) {
     case PnpDevicePin::kPnpPin_PlcMoveConfirm:
       bool confirm_flag = true;
       // in case auxiliary relay not in device map, it seem config flag ignore
-      fx_plc_->GetAuxiliaryRelayState(m_device_move_confirm_, confirm_flag);
-      qDebug() << "Get value M Device:" << confirm_flag;
+      fx_plc_->GetAuxiliaryRelayState(m_device_place_confirm_, confirm_flag);
       if (confirm_flag) {
         emit PnpSignal_HasNewMessage("[PNP Controller]: PLC confirm signal is set.");
         robot_->SetContinueTrigger();
-        SetPnpState(PnpState::kPnpWaitRobotMove);
+        SetPnpMoveState(PnpMoveState::kPnpMoveToPlacePosition);
+      } else {
+        SetPnpMoveState(PnpMoveState::kPnpMoveWaitPlcConfirm);
       }
       break;
   }
@@ -317,7 +345,8 @@ void PnpController::RgiGripperStateChanged(DhGripperStatus state) {
     case PnpMoveState::kPnpMoveRotateRelease2:
       if (state == DhGripperStatus::kGriperAtPosition)  {
         robot_->SetContinueTrigger();
-        SetPnpMoveState(kPnpMoveToPlacePosition);
+//        SetPnpMoveState(kPnpMoveToPlacePosition);
+        SetPnpMoveState(kPnpMoveWaitPlcConfirm);
       }
       break;
   }
@@ -378,21 +407,16 @@ void PnpController::PgcGripperStateChanged(DhGripperStatus state) {
 }
 
 void PnpController::PlcMDeviceChanged(int number, bool value) {
-  if ((pnp_state_current_ == PnpState::kPnpWaitMoveConfirm)
-      && (number == m_device_move_confirm_)) {
-    plc_move_confirm_flag_ = value;
-    if (plc_move_confirm_flag_) {
-      robot_->SetContinueTrigger();
-      SetPnpState(PnpState::kPnpWaitRobotMove);
-    }
-  } else if (number == m_device_emmer_stop_) {
+  if ((number == m_device_pnp_start_) && value) {
+    PnpControllerStart();
+  } else if ((number == m_device_pnp_stop_) && value) {
     PnpControllerStop();
+  } else if ((number == m_device_place_confirm_) && value) {
+    if (move_state_current_ == PnpMoveState::kPnpMoveWaitPlcConfirm) {
+      robot_->SetContinueTrigger();
+      SetPnpMoveState(kPnpMoveToPlacePosition);
+    }
   }
-
-//  bool confirm_flag = true;
-//  // in case auxiliary relay not in device map, it seem config flag ignore
-//  fx_plc_->GetAuxiliaryRelayState(m_device_move_confirm_, confirm_flag);
-//  qDebug() << "Get value M Device:" << confirm_flag;
 }
 
 void PnpController::TimerTimeOut() {
@@ -451,8 +475,7 @@ void PnpController::TriggerGrabFrame() {
 
 void PnpController::MovePickAndPlace() {
   is_possible_pick_ = false;
-//  SetPnpState(PnpState::kPnpWaitRobotMove);
-  SetPnpState(PnpState::kPnpWaitMoveConfirm);
+  SetPnpState(PnpState::kPnpWaitRobotMove);
   emit PnpSignal_HasNewMessage("[PNP Controller]: Sending command to robot.");
 
   DescartesPoint pick_point;
@@ -502,12 +525,6 @@ void PnpController::MovePickAndPlace() {
   // config sub parameters
   robot_->pushCommand(HansCommand::SetOverride(0, 100));
 
-  // wait plc move confirm
-  robot_->pushCommand(
-      HansCommand::TriggerOutputInt(static_cast<int>(kPnpPin_PlcMoveConfirm)));
-  robot_->pushCommand(
-      HansCommand::WaitContinueTrigger());
-
   // move to pick position
   robot_->pushCommand(
       HansCommand::WayPointLRelRef(0, pick_point, 0, 0, 120, 0,
@@ -525,12 +542,13 @@ void PnpController::MovePickAndPlace() {
   robot_->pushCommand(
       HansCommand::WaitContinueTrigger());
 
-  // move up
-  robot_->pushCommand(
-      HansCommand::WayPointLRelRef(0, pick_point, 0, 0, 120, 0,
-                                   veloc_fast_, accel_fast_, 10));
 
   if (object_rotate_angle_ != 0) {
+    // move up
+    robot_->pushCommand(
+        HansCommand::WayPointLRelRef(0, pick_point, 0, 0, 120, 0,
+                                     veloc_fast_, accel_fast_, 10));
+
     // go to rotate point and clamping at rotate position
     robot_->pushCommand(
         HansCommand::WayPointLRelRef(0, position_rotate_, 0, -50, 50, 0,
@@ -596,7 +614,22 @@ void PnpController::MovePickAndPlace() {
         HansCommand::WaitMoveDone(-1));
     robot_->pushCommand(
         HansCommand::TriggerOutputInt(static_cast<int>(kPnpPin_RgiRotate_Zero)));
+  } else {
+    // move up
+    robot_->pushCommand(
+        HansCommand::WayPointLRelRef(0, pick_point, 0, 0, 120, 0,
+                                     veloc_fast_, accel_fast_, 10));
+    robot_->pushCommand(
+        HansCommand::WaitStartMove(-1));
+    robot_->pushCommand(
+        HansCommand::WaitMoveDone(-1));
   }
+
+  // wait plc place confirm
+  robot_->pushCommand(
+      HansCommand::TriggerOutputInt(static_cast<int>(kPnpPin_PlcMoveConfirm)));
+  robot_->pushCommand(
+      HansCommand::WaitContinueTrigger());
 
   // go to place position
   robot_->pushCommand(

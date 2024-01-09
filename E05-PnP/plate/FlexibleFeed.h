@@ -149,6 +149,7 @@ signals:
 private slots:
   void modbusChangedState(QModbusDevice::State state);
   void modbusReadReady();
+  void holdTimerTimeout();
 
 private:
   QString serverHost;
@@ -156,6 +157,8 @@ private:
   QModbusClient *modbusDevice;
   bool connected;
   FeederData m_data;
+  QTimer holdTimer;
+  const int holdRefreshTime = 5000;
 };
 
 #endif // FLEXIBLEFEED_H

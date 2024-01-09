@@ -27,8 +27,6 @@ public:
     kPnpWaitMoveToStandby,    // end by pgc grip state changed == arrived
     kPnpWaitGrabbingFrame,    // end by call ReceivedNewFrame
     kPnpImageProcessing,      // end when image processing done
-    kPnpWaitMoveConfirm,      // enter this state when current move confirm flag is reset,
-                              // move on next state when move confirm flag is set
     kPnpWaitRobotMove,        // end when robot move to end position
     kPnpWaitFeed,
     kPnpWaitScatt,
@@ -45,6 +43,7 @@ public:
     kPnpMoveRotateObject,     // trigger when rgi move state changed == angle reached
     kPnpMovePickAfterRotate,  // trigger when pgc grip state changed == clamping
     kPnpMoveRotateRelease2,   // trigger when rgi grip state changed == arrived
+    kPnpMoveWaitPlcConfirm,   // enter this state when robot wait confirm from plc
     kPnpMoveToPlacePosition,  // trigger when move done
     kPnpMovePlacing,          // trigger when pgc grip state changed == arrived
     kPnpMoveToEndPosition,    // trigger when move done, trigger MOVE PICK AND PLACE DONE
@@ -169,10 +168,15 @@ private:
   int bit_pgc_grip_open_ = 5;
   int bit_pgc_grip_close_ = 6;
 
-  int m_device_move_confirm_ = 0;
-  int m_device_emmer_stop_ = 4;
+  int m_device_pnp_start_ = 0;
+  int m_device_pnp_stop_ = 1;
+  int m_device_pnp_error_ = 2;
+  int m_device_place_confirm_ = 3;
+  int m_device_place_complete_ = 4;
+  int m_device_pnp_running_ = 5;
+  int d_device_sample_counter_ = 0;
 
-  bool plc_move_confirm_flag_ = false;
+//  bool plc_place_confirm_flag_ = false;
 };
 
 #endif // PNPCONTROLLER_H
