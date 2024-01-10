@@ -81,15 +81,13 @@ void HansClient::RobotStopImmediate() {
   mutexQueue.unlock();
 }
 
-void HansClient::SetVirtualDI(int index, bool state)
-{
+void HansClient::SetVirtualDI(int index, bool state) {
   mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
   VirtualDI[index] = state;
   mutexQueue.unlock();
 }
 
-bool HansClient::GetVirtualDI(int index)
-{
+bool HansClient::GetVirtualDI(int index) {
   bool state = false;
   mutexQueue.tryLock(HANS_MUTEX_LOCK_TIMEOUT);
   state = VirtualDI[index];
@@ -406,7 +404,7 @@ void HansClient::ImmediateStopHandle() {
     if(robotData.robotState.IsPowerOn) {
       pushCommand(HansCommand::GrpPowerOff(0));
     }
-    pushCommand(HansCommand::BlackOut());
+//    pushCommand(HansCommand::BlackOut());
     is_immediate_stop_ = false;
   }
   mutexQueue.unlock();

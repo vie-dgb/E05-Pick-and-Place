@@ -1,12 +1,14 @@
 #include "PnpController.h"
 
 PnpController::PnpController(HansClient* const& robot,
+                             Vision::PylonGrab *camera,
                              GeoMatch* const& matcher,
                              CoordinateCvt* const& coordinate_converter,
                              FlexibleFeed* const& flex_plate,
                              DHController* const& dh_controller,
                              FxRemote* const& fx_plc) {
   robot_ = robot;
+  camera_ = camera;
   image_matcher_ = matcher;
   coor_converter_ = coordinate_converter;
   flex_plate_ = flex_plate;
@@ -40,20 +42,10 @@ PnpController::PnpController(HansClient* const& robot,
 PnpController::~PnpController() {}
 
 void PnpController::PnpControllerStart() {
-
-  if (!robot_->robotIsConnected()) {
-    return;
-  }
-
-  if (!fx_plc_->FxIsConnected()) {
-    return;
-  }
-
-  if (!flex_plate_->isFeederConnected()) {
-    return;
-  }
-
-  if (!dh_controller_->DH_IsConnected()) {
+  QStringList check_list;
+  bool is_ready = PnpCheckControllerReady(check_list);
+  emit PnpSignal_UpdateCheckList(is_ready, check_list);
+  if (!is_ready) {
     return;
   }
 
@@ -66,7 +58,7 @@ void PnpController::PnpControllerStart() {
 }
 
 void PnpController::PnpControllerStop() {
-  if (pnp_state_current_ = PnpState::kPnpStandby) {
+  if (pnp_state_current_ == PnpState::kPnpStandby) {
     return;
   }
 
@@ -77,12 +69,77 @@ void PnpController::PnpControllerStop() {
   flex_plate_->writeCommunicateMode(FlexibleFeed::CommunicationMode::Stop);
   SetPnpState(PnpState::kPnpStandby);
   SetPnpMoveState(PnpMoveState::kPnpMoveIdle);
-  fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_pnp_running_, true);
+  fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_pnp_running_, false);
+
+  QTimer *lamp_timer = new QTimer;
+  connect(lamp_timer, &QTimer::timeout, this, [this] {
+    robot_->pushCommand(HansCommand::SetBoxDO(2, false));
+  });
+  lamp_timer->start(1000);
+  lamp_timer->deleteLater();
+
   emit PnpSignal_HasNewMessage("[PNP Controller]: Process is stopped.");
 }
 
 bool PnpController::PnpControllerIsRunning() {
   return (pnp_state_current_ == PnpState::kPnpStandby) ? true : false;
+}
+
+bool PnpController::PnpCheckControllerReady(QStringList &check_list) {
+  bool controller_is_ready = true;
+  check_list.clear();
+
+  // han's robot
+  if (!robot_->robotIsConnected()) {
+    check_list.push_back("Han's Robot is not connect");
+    controller_is_ready = false;
+  } else {
+    if (robot_->GetRobotState().MachineState == HansMachineState::StandBy) {
+      check_list.push_back("Han's Robot is ready");
+    } else {
+      check_list.push_back("Han's Robot is not ready");
+      controller_is_ready = false;
+    }
+  }
+
+  // camera and model
+  if (!camera_->isCameraConnected()) {
+    check_list.push_back("Balser camera is not connect");
+    controller_is_ready = false;
+  } else {
+    if (image_matcher_->getModelSourceSize() > 0) {
+      check_list.push_back("Balser camera is ready");
+    } else {
+      check_list.push_back("Balser camera is not ready(model source empty)");
+      controller_is_ready = false;
+    }
+  }
+
+  // PLC check
+  if (!fx_plc_->FxIsConnected()) {
+    check_list.push_back("PLC is not connect");
+    controller_is_ready = false;
+  } else {
+    check_list.push_back("PLC is connected");
+  }
+
+  // Flexible plate check
+  if (!flex_plate_->isFeederConnected()) {
+    check_list.push_back("Flexible plate is not connect");
+    controller_is_ready = false;
+  } else {
+    check_list.push_back("Flexible plate is connected");
+  }
+
+  // dhr device
+  if (!dh_controller_->DH_IsConnected()) {
+    check_list.push_back("DHR Devices is not connect");
+    controller_is_ready = false;
+  } else {
+    check_list.push_back("DHR Devices is connected");
+  }
+
+  return controller_is_ready;
 }
 
 void PnpController::ReceivedNewFrame(cv::Mat frame) {
@@ -207,17 +264,36 @@ void PnpController::InitProcess() {
   sum_picked_objects_ = 0;
   sum_picked_col_ = 0;
   sum_picked_row_ = 0;
+  emit PnpSignal_CompletePlaceObject(sum_picked_objects_);
   flex_plate_->writeVibrationMode(FlexibleFeed::VibrationMode::Last);
   // add handle when get start flag from plc fail
 //  fx_plc_->GetAuxiliaryRelayState(m_device_place_confirm_, plc_place_confirm_flag_);
   fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_pnp_running_, true);
   fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_place_complete_, false);
+  fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_pnp_error_, false);
   fx_plc_->FxWriteWord(FxPlc::kPLCDevice_D,
                        d_device_sample_counter_, sum_picked_objects_);
+  robot_->pushCommand(HansCommand::SetBoxDO(0, false));
   MoveToStandby();
 }
 
+void PnpController::ErrorHandle() {
+  PnpControllerStop();
+  fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_pnp_error_, true);
+//  robot_->pushCommandInFront(HansCommand::SetBoxDO(0, true));
+  QTimer *lamp_timer = new QTimer;
+  connect(lamp_timer, &QTimer::timeout, this, [this] {
+    robot_->pushCommandInFront(HansCommand::SetBoxDO(0, true));
+  });
+  lamp_timer->start(1000);
+  lamp_timer->deleteLater();
+}
+
 void PnpController::RobotStartMove(int index) {
+  if (pnp_state_current_ == PnpState::kPnpStandby) {
+    return;
+  }
+
   PnpState main_state = static_cast<PnpState>(index);
   switch (main_state) {
     case PnpState::kPnpWaitMoveToStandby:
@@ -247,6 +323,10 @@ void PnpController::RobotStartMove(int index) {
 }
 
 void PnpController::RobotMoveDone(int index) {
+  if (pnp_state_current_ == PnpState::kPnpStandby) {
+    return;
+  }
+
   PnpState main_state = static_cast<PnpState>(index);
   switch (main_state) {
     case PnpState::kPnpWaitMoveToStandby:
@@ -274,6 +354,7 @@ void PnpController::RobotMoveDone(int index) {
       fx_plc_->FxWriteBit(FxPlc::kPLCDevice_M, m_device_place_complete_, true);
       SetPnpMoveState(kPnpMoveIdle);
       sum_picked_objects_ += 1;
+      emit PnpSignal_CompletePlaceObject(sum_picked_objects_);
       fx_plc_->FxWriteWord(FxPlc::kPLCDevice_D,
                            d_device_sample_counter_, sum_picked_objects_);
       if (sum_picked_objects_ >= 21) {
@@ -289,6 +370,10 @@ void PnpController::RobotMoveDone(int index) {
 
 // main control for DH-Robotic device, just use rotate positive
 void PnpController::RobotOuputIntTriggered(int value) {
+  if (pnp_state_current_ == PnpState::kPnpStandby) {
+    return;
+  }
+
   PnpDevicePin pin = static_cast<PnpDevicePin>(value);
   switch (pin) {
     case PnpDevicePin::kPnpPin_RgiRotate_Zero:
@@ -335,17 +420,30 @@ void PnpController::RobotOuputIntTriggered(int value) {
 }
 
 void PnpController::RgiGripperStateChanged(DhGripperStatus state) {
+  if (pnp_state_current_ == PnpState::kPnpStandby) {
+    return;
+  }
+
+  if (state == DhGripperStatus::kGriperClampingFail) {
+    ErrorHandle();
+    emit PnpSignal_ErrorOccurred("RGI gripper clamping failed");
+    return;
+  }
+
   switch (move_state_current_) {
     case PnpMoveState::kPnpMoveToRotatePosition:
       if (state == DhGripperStatus::kGriperClampingObject) {
         robot_->SetContinueTrigger();
         SetPnpMoveState(kPnpMoveRotateRelease);
+      } else if (state == DhGripperStatus::kGriperAtPosition) {
+
+        ErrorHandle();
+        emit PnpSignal_ErrorOccurred("RGI gripper picking failed");
       }
       break;
     case PnpMoveState::kPnpMoveRotateRelease2:
       if (state == DhGripperStatus::kGriperAtPosition)  {
         robot_->SetContinueTrigger();
-//        SetPnpMoveState(kPnpMoveToPlacePosition);
         SetPnpMoveState(kPnpMoveWaitPlcConfirm);
       }
       break;
@@ -353,6 +451,10 @@ void PnpController::RgiGripperStateChanged(DhGripperStatus state) {
 }
 
 void PnpController::RgiRotateStateChanged(DhRotationStatus state) {
+  if (pnp_state_current_ == PnpState::kPnpStandby) {
+    return;
+  }
+
   switch (move_state_current_) {
     case PnpMoveState::kPnpMoveRotateObject:
       if (state == DhRotationStatus::kRotationAtPosition) {
@@ -365,6 +467,16 @@ void PnpController::RgiRotateStateChanged(DhRotationStatus state) {
 }
 
 void PnpController::PgcGripperStateChanged(DhGripperStatus state) {
+  if (pnp_state_current_ == PnpState::kPnpStandby) {
+    return;
+  }
+
+  if (state == DhGripperStatus::kGriperClampingFail) {
+    ErrorHandle();
+    emit PnpSignal_ErrorOccurred("PGC gripper clamping failed");
+    return;
+  }
+
   switch (pnp_state_current_) {
     case PnpState::kPnpWaitMoveToStandby:
       if (state == DhGripperStatus::kGriperAtPosition) {
@@ -379,6 +491,9 @@ void PnpController::PgcGripperStateChanged(DhGripperStatus state) {
       if (state == DhGripperStatus::kGriperClampingObject) {
         robot_->SetContinueTrigger();
         SetPnpMoveState(kPnpMoveToRotatePosition);
+      }  else if (state == DhGripperStatus::kGriperAtPosition) {
+        ErrorHandle();
+        emit PnpSignal_ErrorOccurred("PGC gripper picking failed");
       }
       // handle when robot pick objet fail.
       break;
@@ -391,9 +506,13 @@ void PnpController::PgcGripperStateChanged(DhGripperStatus state) {
       break;
     case PnpMoveState::kPnpMovePickAfterRotate:
       if (state == DhGripperStatus::kGriperClampingObject) {
-        emit PnpSignal_HasNewMessage("[PNP Controller]: Hand grip closed for picking object from rotate moudle.");
+        emit PnpSignal_HasNewMessage(
+            "[PNP Controller]: Hand grip closed for picking object from rotate moudle.");
         robot_->SetContinueTrigger();
         SetPnpMoveState(kPnpMoveRotateRelease2);
+      }  else if (state == DhGripperStatus::kGriperAtPosition) {
+        ErrorHandle();
+        emit PnpSignal_ErrorOccurred("PGC gripper picking failed");
       }
       break;
     case PnpMoveState::kPnpMovePlacing:
@@ -420,6 +539,10 @@ void PnpController::PlcMDeviceChanged(int number, bool value) {
 }
 
 void PnpController::TimerTimeOut() {
+  if (pnp_state_current_ == PnpState::kPnpStandby) {
+    return;
+  }
+
   emit PnpSignal_HasNewMessage("[PNP Controller]: Time Timeout.");
   switch (pnp_state_current_) {
     case PnpState::kPnpWaitFeed:
@@ -450,6 +573,7 @@ void PnpController::TimerTimeOut() {
 
 void PnpController::MoveToStandby() {
   SetPnpState(PnpState::kPnpWaitMoveToStandby);
+  robot_->pushCommand(HansCommand::SetBoxDO(2, true));
   robot_->pushCommand(HansCommand::SetOverride(0, 100));
   position_standby_.Y += 1;
   robot_->pushCommand(HansCommand::WayPointL(0, position_standby_,
@@ -518,8 +642,8 @@ void PnpController::MovePickAndPlace() {
   } else if (matchObj.indexOfSample == 1) {
     object_rotate_angle_ = rgi_rotating_positive_;
   }
-  qDebug() << "Object name: " << matchObj.name
-           << "Rotate angle:" << object_rotate_angle_;
+//  qDebug() << "Object name: " << matchObj.name
+//           << "Rotate angle:" << object_rotate_angle_;
 
   // push command to queue
   // config sub parameters

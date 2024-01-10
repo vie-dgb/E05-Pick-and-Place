@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1269</width>
+    <width>1349</width>
     <height>784</height>
    </rect>
   </property>
@@ -14,7 +14,7 @@
    <string>Han's E05 pick and place control application</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_3">
+   <layout class="QHBoxLayout" name="horizontalLayout_21">
     <item>
      <widget class="QTabWidget" name="tabWidget_Main">
       <property name="enabled">
@@ -34,7 +34,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>5</number>
+       <number>0</number>
       </property>
       <property name="iconSize">
        <size>
@@ -151,111 +151,102 @@
            <number>20</number>
           </property>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_17">
-            <item>
-             <widget class="QPushButton" name="btn_dashboard_start">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>100</width>
-                <height>90</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>100</width>
-                <height>100</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Start</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="btn_dashboard_stop">
-              <property name="minimumSize">
-               <size>
-                <width>100</width>
-                <height>90</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>100</width>
-                <height>100</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Stop</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QVBoxLayout" name="verticalLayout_15">
-            <property name="spacing">
-             <number>2</number>
+           <widget class="QGroupBox" name="groupBox_control">
+            <property name="font">
+             <font>
+              <family>Segoe UI Variable Text Semibold</family>
+              <pointsize>12</pointsize>
+              <bold>true</bold>
+             </font>
             </property>
-            <item>
-             <widget class="QLabel" name="label">
-              <property name="maximumSize">
-               <size>
-                <width>400</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Robot status: Ready</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_2">
-              <property name="maximumSize">
-               <size>
-                <width>400</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Camera status: ready</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_3">
-              <property name="maximumSize">
-               <size>
-                <width>400</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Model status: ready</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_4">
-              <property name="maximumSize">
-               <size>
-                <width>400</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Flexible status: ready</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
+            <property name="title">
+             <string>Control</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_3">
+             <property name="spacing">
+              <number>6</number>
+             </property>
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>2</number>
+             </property>
+             <item>
+              <layout class="QGridLayout" name="gridLayout">
+               <property name="horizontalSpacing">
+                <number>0</number>
+               </property>
+               <property name="verticalSpacing">
+                <number>9</number>
+               </property>
+               <item row="0" column="1">
+                <widget class="QPushButton" name="btn_dashboard_stop">
+                 <property name="minimumSize">
+                  <size>
+                   <width>100</width>
+                   <height>90</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>100</width>
+                   <height>100</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>Stop</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QPushButton" name="btn_dashboard_start">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>100</width>
+                   <height>90</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>100</width>
+                   <height>100</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>Start</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QPushButton" name="btn_dashboard_check">
+                 <property name="maximumSize">
+                  <size>
+                   <width>80</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>Check</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
           </item>
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_19">
@@ -271,7 +262,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Process state: init</string>
+               <string>Process state:</string>
               </property>
              </widget>
             </item>
@@ -297,7 +288,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Matched name: Side a</string>
+               <string>Matched name:</string>
               </property>
              </widget>
             </item>
@@ -310,7 +301,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Matched scores: 0.99</string>
+               <string>Matched scores:</string>
               </property>
              </widget>
             </item>
@@ -323,7 +314,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Matched angle: 123</string>
+               <string>Matched angle:</string>
               </property>
              </widget>
             </item>
@@ -335,7 +326,7 @@
              <number>2</number>
             </property>
             <item>
-             <widget class="QLabel" name="label_8">
+             <widget class="QLabel" name="label_total_picked">
               <property name="maximumSize">
                <size>
                 <width>400</width>
@@ -343,33 +334,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Total object picked: 123</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_9">
-              <property name="maximumSize">
-               <size>
-                <width>400</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Total object a: 123</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_10">
-              <property name="maximumSize">
-               <size>
-                <width>400</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Total object b: 123</string>
+               <string>Total object picked:</string>
               </property>
              </widget>
             </item>
@@ -387,6 +352,26 @@
              </size>
             </property>
            </spacer>
+          </item>
+          <item>
+           <widget class="QTextEdit" name="textEdit_pnp_msg">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="font">
+             <font>
+              <family>Segoe UI Variable Text Semibold</family>
+              <pointsize>12</pointsize>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -1294,82 +1279,6 @@
                </property>
               </spacer>
              </item>
-             <item>
-              <layout class="QGridLayout" name="gridLayout">
-               <item row="0" column="0">
-                <widget class="QPushButton" name="btn_robot_gripperToggle">
-                 <property name="minimumSize">
-                  <size>
-                   <width>80</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>1024</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>Segoe UI Variable Text Semibold</family>
-                   <pointsize>11</pointsize>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Open Gripper</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_robot_gripper_state">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>200</width>
-                   <height>24</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>1024</width>
-                   <height>24</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>Segoe UI Variable Text Semibold</family>
-                   <pointsize>12</pointsize>
-                   <italic>false</italic>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Gripper state: </string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <spacer name="verticalSpacer_8">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </item>
             </layout>
            </item>
            <item>
@@ -2065,7 +1974,7 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1233</width>
+             <width>1313</width>
              <height>504</height>
             </rect>
            </property>
@@ -3308,7 +3217,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1269</width>
+     <width>1349</width>
      <height>21</height>
     </rect>
    </property>

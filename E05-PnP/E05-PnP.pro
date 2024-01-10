@@ -114,3 +114,4 @@ RESOURCES += \
     AppResource.qrc
 
 RC_ICONS = icon/gbit.ico
+OK_ICONS = icon/ok.ico

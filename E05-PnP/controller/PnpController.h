@@ -5,12 +5,15 @@
 #include <QDebug>
 #include <QTimer>
 
+#include "camera/PylonGrab.h"
+#include "camera/GeoMatch.h"
 #include "robot/HansClient.h"
 #include "robot/CoordinateCvt.h"
 #include "camera/GeoMatch.h"
 #include "plate/FlexibleFeed.h"
 #include "dh-robotic/dhcontroller.h"
 #include "mc_protocol/fxremote.h"
+
 
 using namespace rb;
 using namespace ImageMatch;
@@ -61,6 +64,7 @@ public:
   };
 
   PnpController(HansClient* const& robot = nullptr,
+                Vision::PylonGrab *camera = nullptr,
                 GeoMatch* const& matcher = nullptr,
                 CoordinateCvt* const& coordinate_converter = nullptr,
                 FlexibleFeed* const& flex_plate = nullptr,
@@ -71,6 +75,7 @@ public:
   void PnpControllerStart();
   void PnpControllerStop();
   bool PnpControllerIsRunning();
+  bool PnpCheckControllerReady(QStringList &check_list);
   void ReceivedNewFrame(cv::Mat frame);
 
   static QString StateToQString(PnpState state);
@@ -80,6 +85,7 @@ private:
   void SetPnpState(PnpState state);
   void SetPnpMoveState(PnpMoveState state);
   void InitProcess();
+  void ErrorHandle();
   void RobotStartMove(int index);
   void RobotMoveDone(int index);
   void RobotOuputIntTriggered(int value);
@@ -106,6 +112,9 @@ signals:
   void PnpSignal_HasNewMessage(QString content);
   void PnpSignal_GrabFrameTriggered();
   void PnpSignal_DisplayMatchingImage(cv::Mat frame);
+  void PnpSignal_UpdateCheckList(bool is_ready, QStringList check_list);
+  void PnpSignal_ErrorOccurred(QString msg);
+  void PnpSignal_CompletePlaceObject(int counter);
 
 public:
   DescartesPoint position_standby_;
@@ -122,7 +131,7 @@ public:
   const int rgi_rotating_positive_ = 90;
   const int rgi_rotating_negative_ = -90;
   const int rgi_grip_open_pos_ = 1000;
-  const int rgi_grip_close_pos_ = 0;
+  const int rgi_grip_close_pos_ = 5;
   const int pgc_grip_open_pos_ = 250;
   const int pgc_grip_close_pos_ = 0;
 
@@ -133,6 +142,7 @@ public:
 
 private:
   HansClient *robot_ = nullptr;
+  Vision::PylonGrab *camera_ = nullptr;
   GeoMatch *image_matcher_ = nullptr;
   CoordinateCvt *coor_converter_ = nullptr;
   FlexibleFeed *flex_plate_ = nullptr;
@@ -175,8 +185,6 @@ private:
   int m_device_place_complete_ = 4;
   int m_device_pnp_running_ = 5;
   int d_device_sample_counter_ = 0;
-
-//  bool plc_place_confirm_flag_ = false;
 };
 
 #endif // PNPCONTROLLER_H

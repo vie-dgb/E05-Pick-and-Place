@@ -8,5 +8,11 @@
         <file>icon/flexible-plate.ico</file>
         <file>icon/gripper.ico</file>
         <file>icon/plc.ico</file>
+        <file>icon/error.ico</file>
+        <file>icon/error-reverse.ico</file>
+        <file>icon/ok.ico</file>
+        <file>icon/ok-reverse.ico</file>
+        <file>icon/warning.ico</file>
+        <file>icon/warning-reverse.ico</file>
     </qresource>
 </RCC>

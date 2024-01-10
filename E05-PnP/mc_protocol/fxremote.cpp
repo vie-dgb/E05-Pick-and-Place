@@ -116,7 +116,6 @@ bool FxRemote::GetAuxiliaryRelayState(int device_number, bool &get_value) {
   mutex_data_.tryLock(FX_MUTEX_BLOCK_TIME);
   if (device_map_.m_map.contains(device_number)) {
     get_value = device_map_.m_map[device_number];
-//    qDebug() << "Get value M Device:" << device_map_.m_map[device_number];
     is_get_success = true;
   }
   mutex_data_.unlock();
@@ -147,6 +146,7 @@ void FxRemote::run() {
   send_queue_.clear();
   FxGetModelName();
   polling_time_counter_ = new TimeCounter;
+  is_first_time_query = true;
 
   while (is_thread_running_) {
     PollingQueryHandle();
@@ -194,6 +194,9 @@ void FxRemote::PollingQueryHandle() {
   QueryDeviceD();
   QuerySpecialRelay();
   emit FxSignal_PollingQueryStriggered(device_map_);
+  if (is_first_time_query) {
+    is_first_time_query = false;
+  }
 }
 
 void FxRemote::QueryDeviceM() {
@@ -308,7 +311,7 @@ void FxRemote::ResponseHandle(McProtocol::McResult &result) {
         int map_key = result.device_start_number + index;
         if (device_map_.m_map.contains(map_key)) {
           bool new_state = (result.response_data[index] == 0) ? false : true;
-          if (device_map_.m_map[map_key] != new_state) {
+          if ((device_map_.m_map[map_key] != new_state) && (!is_first_time_query)) {
 //            qDebug() << "New state at M" << QString::number(map_key)
 //                     << ":" << new_state;
             emit FxSignal_DeivceMChangedState(map_key, new_state);
@@ -323,7 +326,7 @@ void FxRemote::ResponseHandle(McProtocol::McResult &result) {
         int map_key = result.device_start_number + index;
         if (device_map_.y_map.contains(map_key)) {
           bool new_state = (result.response_data[index] == 0) ? false : true;
-          if (device_map_.y_map[map_key] != new_state) {
+          if ((device_map_.y_map[map_key] != new_state) && (!is_first_time_query)) {
 //            qDebug() << "New state at Y" << QString::number(map_key)
 //                     << ":" << new_state;
             emit FxSignal_DeivceYChangedState(map_key, new_state);
@@ -342,7 +345,7 @@ void FxRemote::ResponseHandle(McProtocol::McResult &result) {
           quint8 high_byte = static_cast<quint8>(result.response_data[index+1]);
           quint16 value = (high_byte << 8) + low_byte;
           quint16 previous_value = device_map_.d_map[map_key];
-          if (previous_value != value) {
+          if ((previous_value != value) && (!is_first_time_query)) {
 //            qDebug() << "New state at D" << QString::number(map_key)
 //                     << ":" << value;
             emit FxSignal_DeviceDChangedValue(map_key, value);

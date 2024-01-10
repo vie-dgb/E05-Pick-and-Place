@@ -110,6 +110,7 @@ private:
   /// BUTTON ACTIONS
   void on_Click_Dashboard_Start();
   void on_Click_Dashboard_Stop();
+  void on_Click_Dashboard_Check();
 
   void on_Click_Robot_Connect();
   void on_Click_Robot_Enable();
@@ -177,6 +178,7 @@ private:
 
   /// CONTROLLER
   PnpController *pnp_controller_;
+  bool pnp_status_dialog_showing = false;
 
   // UI lable text
   const QString lb_robot_Connect = "Connect";

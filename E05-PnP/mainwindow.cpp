@@ -77,6 +77,7 @@ void MainWindow::initUiEvent() {
 
 void MainWindow::PnpUiInitialize() {
   pnp_controller_ = new PnpController(hansRobot,
+                                      cameraControl,
                                       matcher,
                                       coorCvt,
                                       flexPlate,
@@ -85,13 +86,14 @@ void MainWindow::PnpUiInitialize() {
 
   connect(pnp_controller_, &PnpController::PnpSignal_StateChanged, this,
           [this] (PnpController::PnpState state) {
-    ui->label_dashboard_pnp_state->setText("PNP state: " + PnpController::StateToQString(state));
+    ui->label_dashboard_pnp_state->setText(
+        "PNP state: " + PnpController::StateToQString(state));
   });
 
   connect(pnp_controller_, &PnpController::PnpSignal_HasNewMessage,
           this, [this] (QString content) {
-    qDebug() << content;
-    ui->statusbar->showMessage(content);
+//    ui->statusbar->showMessage(content);
+    ui->textEdit_pnp_msg->append(content);
   });
 
   connect(pnp_controller_, &PnpController::PnpSignal_GrabFrameTriggered,
@@ -100,19 +102,22 @@ void MainWindow::PnpUiInitialize() {
     retrieveMode = FrameRetrieveMode::kFramePnpRun;
   });
 
-  connect(this, &MainWindow::PnpFrameGrabbed, pnp_controller_, &PnpController::ReceivedNewFrame);
+  connect(this, &MainWindow::PnpFrameGrabbed,
+          pnp_controller_, &PnpController::ReceivedNewFrame);
 
   connect(pnp_controller_, &PnpController::PnpSignal_DisplayMatchingImage,
           this, [this] (cv::Mat frame) {
     double img_scale = 1.0;
     if(ui->label_dashboard_frame_view->height() < frame.rows) {
-      img_scale = ((double)ui->label_dashboard_frame_view->height()) / ((double)frame.rows);
+      img_scale = ((double)ui->label_dashboard_frame_view->height())
+                  / ((double)frame.rows);
     }
     DisplayImageFrame(ui->label_dashboard_frame_view, frame, img_scale);
 
     if (matcher->matchingResult.isFoundMatchObject) {
       MatchedObjects object = matcher->matchingResult.Objects.front();
-      ui->label_dashboard_object_name->setText("Matched name: " + QString::fromStdString(object.name));
+      ui->label_dashboard_object_name->setText(
+          "Matched name: " + QString::fromStdString(object.name));
 
       double angle = -object.angle*C_R2D;
       if (angle >= 180.0) {
@@ -120,9 +125,45 @@ void MainWindow::PnpUiInitialize() {
       } else if (angle <= -180.0) {
         angle += 360.0;
       }
-      ui->label_dashboard_object_angle->setText("Matched angle: " + QString::number(angle));
-      ui->label_dashboard_object_score->setText("Matched scores: " + QString::number(object.scores));
+      ui->label_dashboard_object_angle->setText(
+          "Matched angle: " + QString::number(angle));
+      ui->label_dashboard_object_score->setText(
+          "Matched scores: " + QString::number(object.scores));
     }
+  });
+
+  connect(pnp_controller_, &PnpController::PnpSignal_UpdateCheckList, this,
+          [this] (bool is_ready, QStringList check_list) {
+    if ((!is_ready) && (!pnp_status_dialog_showing)) {
+      pnp_status_dialog_showing = true;
+      QPixmap icon_map(":/icon/warning-reverse.ico");
+      check_list.push_back("<br>Please check all devices again");
+      QMessageBox msgBox;
+      msgBox.setIconPixmap(icon_map);
+      msgBox.setWindowTitle("Start process");
+      msgBox.setText(check_list.join("<br>"));
+      msgBox.setTextFormat(Qt::RichText);
+      msgBox.setStandardButtons(QMessageBox::Ok);
+      msgBox.exec();
+      pnp_status_dialog_showing = false;
+    }
+  });
+
+  connect(pnp_controller_, &PnpController::PnpSignal_ErrorOccurred, this,
+          [this] (QString msg) {
+      QPixmap icon_map(":/icon/error-reverse.ico");
+      QMessageBox msgBox;
+      msgBox.setIconPixmap(icon_map);
+      msgBox.setWindowTitle("Error occurred");
+      msgBox.setText(msg);
+      msgBox.setTextFormat(Qt::RichText);
+      msgBox.setStandardButtons(QMessageBox::Close);
+      msgBox.exec();
+  });
+
+  connect(pnp_controller_, &PnpController::PnpSignal_CompletePlaceObject, this,
+          [this] (int counter) {
+    ui->label_total_picked->setText("Total object picked: " + QString::number(counter));
   });
 }
 
@@ -166,6 +207,8 @@ void MainWindow::connectUiEvent() {
           this, &MainWindow::on_Click_Dashboard_Start);
   connect(ui->btn_dashboard_stop, &QPushButton::clicked,
           this, &MainWindow::on_Click_Dashboard_Stop);
+  connect(ui->btn_dashboard_check, &QPushButton::clicked,
+          this, &MainWindow::on_Click_Dashboard_Check);
 
   connect(ui->btn_robot_Connect, &QPushButton::clicked,
           this, &MainWindow::on_Click_Robot_Connect);
@@ -173,8 +216,6 @@ void MainWindow::connectUiEvent() {
           this, &MainWindow::on_Click_Robot_Enable);
   connect(ui->btn_robot_close, &QPushButton::clicked,
           this, &MainWindow::on_Click_Robot_Close);
-  connect(ui->btn_robot_gripperToggle, &QPushButton::clicked,
-          this, &MainWindow::on_Click_Robot_GripperToggle);
 
   connect(ui->btn_Camera_Connect, &QPushButton::clicked,
           this, &MainWindow::on_Click_Camera_Connect);
@@ -331,15 +372,6 @@ void MainWindow::robot_UiUpdate() {
       ui->btn_robot_enable->setEnabled(false);
       break;
   }
-
-  if(hansRobot->DHGripper_IsOpen()) {
-    ui->btn_robot_gripperToggle->setText("Close gripper");
-  }
-  else {
-    ui->btn_robot_gripperToggle->setText("Open gripper");
-  }
-
-  ui->label_robot_gripper_state->setText("Gripper state: " + rb::DhGripStateToQString(hansRobot->DHGripper_GetState()));
 
   /// refresh Box digital input state
   ui->radioButton_DI_0->setChecked(hansRobot->GetRobotBoxDI(0));
@@ -812,6 +844,26 @@ void MainWindow::on_Click_Dashboard_Start() {
 
 void MainWindow::on_Click_Dashboard_Stop() {
   pnp_controller_->PnpControllerStop();
+}
+
+void MainWindow::on_Click_Dashboard_Check() {
+  QStringList check_list;
+  QPixmap icon_map(":/icon/ok-reverse.ico");
+  if (pnp_controller_->PnpCheckControllerReady(check_list)) {
+    icon_map.load(":/icon/ok-reverse.ico");
+    check_list.push_back("<br>Ready for operate process");
+  } else {
+    icon_map.load(":/icon/warning-reverse.ico");
+    check_list.push_back("<br>Please check all devices again");
+  }
+
+  QMessageBox msgBox;
+  msgBox.setIconPixmap(icon_map);
+  msgBox.setWindowTitle("Status check");
+  msgBox.setText(check_list.join("<br>"));
+  msgBox.setTextFormat(Qt::RichText);
+  msgBox.setStandardButtons(QMessageBox::Ok);
+  msgBox.exec();
 }
 
 void MainWindow::on_Click_Robot_Connect() {

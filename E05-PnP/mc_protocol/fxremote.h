@@ -107,6 +107,7 @@ private:
   QString plc_model_name_;
   bool plc_is_running_mode_;
   bool plc_is_error_occured_;
+  bool is_first_time_query = false;
 
   TimeCounter *polling_time_counter_;
   const int polling_time_out_ = 100;
